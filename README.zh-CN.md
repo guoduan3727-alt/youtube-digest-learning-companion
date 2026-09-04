@@ -16,19 +16,24 @@ YouTube Digest 是一个需要自行提供 API Key 的开源项目，通过 GitH
 
 这个增强版基于 [Zara Zhang 的原始 YouTube Digest 项目](https://github.com/zarazhangrui/youtube-digest)继续开发，完整保留上游 Git 历史和 MIT 许可证，由增强版维护者独立维护，不代表上游官方发布。原作者、历史贡献者以及 OpenAI Codex 的协助说明见 [Contributors and attribution](CONTRIBUTORS.md)。
 
+**快速导航：** [增强功能](#增强版-v130-新增功能) · [手动安装](#手动安装) · [API-Key 设置](#设置-api-key) · [播放器双语](#使用-youtube-digest) · [单词本与 Obsidian](#使用-obsidian-建立单词本) · [审核报告](AUDIT.zh-CN.md) · [隐私说明](PRIVACY.md)
+
 点击查看演示和教学视频（小白友好）：[https://www.bilibili.com/video/BV1dnuq6dEak/](https://www.bilibili.com/video/BV1dnuq6dEak/)
 
 ![YouTube Digest 双语演示](YouTube%20Digest%20demo%20bilingual.png)
 
 ## 增强版 v1.3.0 新增功能
 
-- 从字幕中选中单词或短语，建立自动去重的单词本。
-- 同一单词只保留一个词条，在不同视频或不同时间点再次遇到时追加语境。
-- 使用 DeepSeek 补充音标、多个双语义项、对应例句和视频原句分析。
-- 通过 Obsidian 官方 URI 创建或更新可读的独立单词 Markdown 笔记，不需要社区插件。
-- 在普通、剧院和全屏模式下，将可独立开关的双语字幕显示在 YouTube 播放器底部。
-- 播放器与 Full Transcript 共用基础字幕翻译缓存和正在执行的请求，避免重复调用 DeepSeek。
-- 完整保留并整合下方列出的上游 v1.2.0 功能。
+| 新增功能 | 如何使用 | 实际效果 |
+| --- | --- | --- |
+| 收集生词 | 在 Transcript 中选中单词或短语，再点击 **Add word**。 | 保存单词、完整原句、视频、频道和时间戳。 |
+| 自动去重与追加语境 | 在另一句话或另一个视频中再次添加同一单词。 | 只保留一个词条，只追加新的语境；同一时间点重复添加会被忽略。 |
+| 双语词典信息 | 保存时保留 **Generate dictionary details**，也可之后点击 **Generate details**。 | 补充音标、多个义项、中英文释义、对应例句、原句翻译和本句含义。 |
+| Obsidian 单词笔记 | 在 Settings 中填写 Vault 和文件夹，再到 Words 点击 **Send to Obsidian**。 | 通过官方 Obsidian URI，为每个标准化单词创建或更新一份易读的 Markdown 笔记。 |
+| 播放器底部双语字幕 | 点击 Full Transcript 上方的 **播放器双语**。 | 在普通、剧院和全屏模式中显示原文与中文，右侧面板功能继续保留。 |
+| 共用翻译缓存 | 同时使用播放器字幕和 Full Transcript。 | 两者复用相同的字幕分段、缓存和正在进行的请求，同一句不会重复调用 DeepSeek。 |
+
+以上功能全部采用新增方式实现。原有 Transcript、Overview、Notes、搜索、选中文本讲解、导出、设置和时间跳转都保留。完整功能保留矩阵和测试证据见[功能审核报告](AUDIT.zh-CN.md)。
 
 ### 保留的上游 v1.2.0 功能
 
@@ -37,6 +42,17 @@ YouTube Digest 是一个需要自行提供 API Key 的开源项目，通过 GitH
 - 只翻译当前可见的 Overview 和 Notes 内容，并通过小批次渐进显示和缓存结果。
 - 选中字幕后，可以直接讲解内容或保存带时间戳的笔记。
 - 页面跳转后保留字幕阅读位置，并在离开 YouTube 视频页面时自动关闭侧边栏。
+
+## 五分钟开始使用
+
+1. [下载增强版项目 ZIP](https://github.com/guoduan3727-alt/youtube-digest-enhanced/archive/refs/heads/main.zip)，解压到一个长期保留的文件夹。
+2. 打开 `chrome://extensions`，启用“开发者模式”，点击“加载已解压的扩展程序”，选择包含 `manifest.json` 的文件夹。
+3. 打开 **Settings**，亲自在设置页面填写 Supadata 和 DeepSeek API Key。不要把 Key 写入文件、AI 对话、截图或 GitHub Issue。
+4. 打开一个带字幕的普通 YouTube 视频，点击 YouTube Digest 扩展图标。
+5. 在右侧使用 Transcript、Overview、Notes 和 Words；需要视频底部双语字幕时点击 **播放器双语**。
+6. 使用 Obsidian 时，只需在 Settings 中填写 Vault 名称或 ID 和目标文件夹，再对已保存单词点击 **Send to Obsidian**。
+
+下方继续提供完整安装、服务配置、功能行为、费用、隐私说明和故障排查。
 
 ## 让你的编程 Agent 帮你安装
 

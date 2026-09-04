@@ -16,17 +16,22 @@ YouTube Digest is a bring-your-own-key project installed locally from GitHub. It
 
 This enhanced edition is derived from [Zara Zhang's original YouTube Digest](https://github.com/zarazhangrui/youtube-digest) and retains the full upstream history and MIT license. It is independently maintained and is not presented as an official upstream release. See [Contributors and attribution](CONTRIBUTORS.md), including the original author and the role of OpenAI Codex.
 
+**Quick links:** [Enhanced features](#new-in-this-enhanced-v130-edition) · [Install](#install-manually) · [API setup](#set-up-your-api-keys) · [Player subtitles](#use-youtube-digest) · [Vocabulary and Obsidian](#build-a-vocabulary-notebook-with-obsidian) · [Audit report](AUDIT.md) · [Privacy](PRIVACY.md)
+
 ![YouTube Digest demo](YouTube%20Digest%20demo.png)
 
 ## New in this enhanced v1.3.0 edition
 
-- Build a deduplicated vocabulary notebook from selected transcript words or phrases.
-- Merge repeated words into one entry while appending distinct timestamped contexts from multiple videos.
-- Generate bilingual dictionary senses, pronunciation, examples, and sentence-specific analysis with DeepSeek.
-- Create or update readable per-word Markdown notes through Obsidian's official URI, without a community plugin.
-- Show independently controlled bilingual subtitles at the bottom of the YouTube player in regular, theater, and full-screen modes.
-- Share one base subtitle translation cache and in-flight request pool between the player and Full Transcript to avoid duplicate DeepSeek calls.
-- Preserve and integrate all upstream v1.2.0 features listed below.
+| Enhancement | How to use it | Result |
+| --- | --- | --- |
+| Vocabulary capture | Select a word or phrase in Transcript, then choose **Add word**. | Saves the word, complete source sentence, video, channel, and timestamp. |
+| Duplicate-safe collection | Add the same word again in another sentence or video. | Keeps one word entry and appends only distinct contexts. The same timestamp is ignored. |
+| Bilingual dictionary | Keep **Generate dictionary details** enabled when saving, or choose **Generate details** later. | Adds pronunciation, multiple senses, English and Chinese definitions, examples, sentence translation, and meaning in context. |
+| Obsidian word notes | Set a vault and folder in Settings, then choose **Send to Obsidian** in Words. | Creates or updates one readable Markdown note per normalized word through the official Obsidian URI. |
+| Player bilingual subtitles | Choose **播放器双语** above Full Transcript. | Shows original and Chinese lines at the bottom of the player in regular, theater, and full-screen modes. The side panel remains available. |
+| Shared translation work | Use player subtitles and Full Transcript together. | Both views reuse the same segmented translations, cache entries, and in-flight requests instead of calling DeepSeek twice for the same cue. |
+
+Every item above is additive. The original transcript, Overview, Notes, search, selection explanation, exports, settings, and navigation remain available. See the [functional audit](AUDIT.md) for the complete preservation matrix and test evidence.
 
 ### Upstream v1.2.0 features retained
 
@@ -35,6 +40,17 @@ This enhanced edition is derived from [Zara Zhang's original YouTube Digest](htt
 - Translate visible Overview and Notes content progressively in small cached batches.
 - Explain selected transcript text or save it directly as a timestamped note.
 - Keep your transcript position across navigation, with the panel closing automatically outside YouTube video pages.
+
+## Five-minute start
+
+1. [Download this enhanced repository](https://github.com/guoduan3727-alt/youtube-digest-enhanced/archive/refs/heads/main.zip) and extract it to a permanent folder.
+2. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the folder containing `manifest.json`.
+3. Open **Settings** and enter your own Supadata and DeepSeek API keys directly. Do not put keys in a file, chat, screenshot, or GitHub issue.
+4. Open a standard YouTube video with captions and click the YouTube Digest extension icon.
+5. Use Transcript, Overview, Notes, and Words from the right-side panel. Choose **播放器双语** when you want bilingual lines inside the video player.
+6. For Obsidian, enter only the vault name or ID and destination folder in Settings. Then use **Send to Obsidian** on a saved word.
+
+The detailed installation, provider setup, feature behavior, costs, privacy notes, and troubleshooting steps continue below.
 
 ## Install with your coding agent
 
