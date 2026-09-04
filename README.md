@@ -2,6 +2,9 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
+> [!IMPORTANT]
+> **Project lineage:** This enhanced edition is built directly on [Zara Zhang's YouTube Digest project (@zarazhangrui)](https://github.com/zarazhangrui/youtube-digest). It extends that codebase; it is not an unrelated reimplementation. Zara Zhang is the original creator, the upstream Git history and MIT copyright are retained, and this independently maintained edition does not imply upstream endorsement. See [NOTICE](NOTICE.md) and [Contributors](CONTRIBUTORS.md).
+
 Turn every YouTube video into a resource for deep learning. YouTube Digest brings transcripts, bilingual translation, AI overviews, explanations, and timestamped notes into one Chrome side panel, so you can study ideas and language without losing your place.
 
 - Turn captions into a readable, searchable learning resource.
@@ -14,7 +17,7 @@ Turn every YouTube video into a resource for deep learning. YouTube Digest bring
 
 YouTube Digest is a bring-your-own-key project installed locally from GitHub. It is not available through the Chrome Web Store, does not include API credits, and does not run a developer-operated server.
 
-This enhanced edition is derived from [Zara Zhang's original YouTube Digest](https://github.com/zarazhangrui/youtube-digest) and retains the full upstream history and MIT license. It is independently maintained and is not presented as an official upstream release. See [Contributors and attribution](CONTRIBUTORS.md), including the original author and the role of OpenAI Codex.
+This enhanced edition is derived from [Zara Zhang's original YouTube Digest (@zarazhangrui)](https://github.com/zarazhangrui/youtube-digest) and retains the full upstream history and MIT license. It is independently maintained and is not presented as an official upstream release. See [Contributors and attribution](CONTRIBUTORS.md), including the original author and the role of OpenAI Codex.
 
 **Quick links:** [Enhanced features](#new-in-this-enhanced-v130-edition) · [Install](#install-manually) · [API setup](#set-up-your-api-keys) · [Player subtitles](#use-youtube-digest) · [Vocabulary and Obsidian](#build-a-vocabulary-notebook-with-obsidian) · [Audit report](AUDIT.md) · [Privacy](PRIVACY.md)
 

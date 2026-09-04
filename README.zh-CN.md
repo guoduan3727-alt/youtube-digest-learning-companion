@@ -2,6 +2,9 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
+> [!IMPORTANT]
+> **项目来源：** 本增强版直接基于 [Zara Zhang 的 YouTube Digest 项目（@zarazhangrui）](https://github.com/zarazhangrui/youtube-digest)继续完善，是对原代码库的扩展，并非无关的重新实现。Zara Zhang 是原作者；项目保留完整上游 Git 历史和原 MIT 版权声明。本增强版由我们独立维护，不代表原作者对增强版背书。详见 [NOTICE](NOTICE.md) 和[贡献者说明](CONTRIBUTORS.md)。
+
 把每个 YouTube 视频变成一份可以深入学习的资料。YouTube Digest 把字幕、双语翻译、AI 概览、内容讲解和时间戳笔记放进同一个 Chrome 侧边栏，让你可以持续学习视频中的知识和语言，同时不丢失原视频上下文。
 
 - 把零碎字幕变成清晰、可搜索的学习资料。
@@ -14,7 +17,7 @@
 
 YouTube Digest 是一个需要自行提供 API Key 的开源项目，通过 GitHub 安装。目前没有上架 Chrome 应用商店，不赠送 API 额度，也没有开发者运营的服务器。
 
-这个增强版基于 [Zara Zhang 的原始 YouTube Digest 项目](https://github.com/zarazhangrui/youtube-digest)继续开发，完整保留上游 Git 历史和 MIT 许可证，由增强版维护者独立维护，不代表上游官方发布。原作者、历史贡献者以及 OpenAI Codex 的协助说明见 [Contributors and attribution](CONTRIBUTORS.md)。
+这个增强版基于 [Zara Zhang 的原始 YouTube Digest 项目（@zarazhangrui）](https://github.com/zarazhangrui/youtube-digest)继续开发，完整保留上游 Git 历史和 MIT 许可证，由增强版维护者独立维护，不代表上游官方发布。原作者、历史贡献者以及 OpenAI Codex 的协助说明见 [Contributors and attribution](CONTRIBUTORS.md)。
 
 **快速导航：** [增强功能](#增强版-v130-新增功能) · [手动安装](#手动安装) · [API-Key 设置](#设置-api-key) · [播放器双语](#使用-youtube-digest) · [单词本与 Obsidian](#使用-obsidian-建立单词本) · [审核报告](AUDIT.zh-CN.md) · [隐私说明](PRIVACY.md)
 

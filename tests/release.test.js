@@ -40,6 +40,7 @@ test("release copy documents current scope without em dashes", () => {
   );
   assert.match(readme, /^# YouTube Digest$/m);
   assert.match(readme, /Zara Zhang's original YouTube Digest/);
+  assert.match(readme, /Project lineage:[\s\S]*@zarazhangrui/);
   assert.match(readme, /Contributors and attribution/);
   assert.match(readme, /enhanced v1\.3\.0 edition/);
   assert.match(
@@ -68,6 +69,7 @@ test("release copy documents current scope without em dashes", () => {
   assert.doesNotMatch(readme, /^## Contributing$/m);
   assert.match(chineseReadme, /^# YouTube Digest$/m);
   assert.match(chineseReadme, /Zara Zhang 的原始 YouTube Digest 项目/);
+  assert.match(chineseReadme, /项目来源：[\s\S]*@zarazhangrui/);
   assert.match(chineseReadme, /增强版 v1\.3\.0 新增功能/);
   assert.match(chineseReadme, /把每个 YouTube 视频变成一份可以深入学习的资料/);
   assert.match(chineseReadme, /^## 让你的编程 Agent 帮你安装$/m);
@@ -210,6 +212,10 @@ test("release copy documents current scope without em dashes", () => {
   assert.match(contributors, /OpenAI Codex/);
   assert.match(contributors, /youtube-digest\/graphs\/contributors/);
   assert.match(read("LICENSE"), /Copyright \(c\) 2026 Zara Zhang/);
+  const notice = read("NOTICE.md");
+  assert.match(notice, /directly based on that project/);
+  assert.match(notice, /Zara Zhang \(@zarazhangrui\)/);
+  assert.match(notice, /OpenAI Codex/);
 });
 
 test("product UI contains no emoji or emoji-like pictographs", () => {

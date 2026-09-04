@@ -1,6 +1,6 @@
 # Contributors and attribution
 
-This repository is an enhanced derivative of [YouTube Digest](https://github.com/zarazhangrui/youtube-digest). The complete upstream Git history is retained so authorship remains visible and auditable.
+This repository is not an independent reimplementation. It is an enhanced derivative built directly on [Zara Zhang's YouTube Digest project (@zarazhangrui)](https://github.com/zarazhangrui/youtube-digest). The complete upstream Git history is retained so authorship remains visible and auditable.
 
 ## Original project
 
