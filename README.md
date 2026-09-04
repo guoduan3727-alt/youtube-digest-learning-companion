@@ -117,15 +117,6 @@ Obsidian Properties include learning status, first-added date, updated date, con
 
 The published edition supports Chrome 116 or newer, standard `youtube.com/watch` pages, native captions returned by Supadata, and DeepSeek V4 Flash. Shorts, live streams, private videos, access-restricted videos, and videos without native captions may not work. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md) for details.
 
-## Verification and release
-
-- Automated tests: **83 passed, 0 failed**.
-- Release package: **25 explicitly allowlisted files**.
-- Checks include JavaScript syntax, feature regression, credential patterns, private-key blocks, GitHub tokens, and Obsidian Vault IDs.
-- Automated tests do not replace a real-video smoke test with the user's own provider accounts.
-
-See [AUDIT.md](AUDIT.md) or [中文审核报告](AUDIT.zh-CN.md). Download [YouTube Digest Learning Companion v1.3.0](https://github.com/guoduan3727-alt/youtube-digest-learning-companion/releases/tag/v1.3.0).
-
 ## Attribution and license
 
 This repository retains the original project history and Zara Zhang's MIT copyright notice. See [NOTICE.md](NOTICE.md), [CONTRIBUTORS.md](CONTRIBUTORS.md), the upstream [Contributors graph](https://github.com/zarazhangrui/youtube-digest/graphs/contributors), and [LICENSE](LICENSE).

@@ -117,15 +117,6 @@ Obsidian Properties 包含学习状态、首次添加日期、更新时间、语
 
 发布版本支持 Chrome 116 或更高版本、普通 `youtube.com/watch` 页面、Supadata 返回的原生字幕和 DeepSeek V4 Flash。Shorts、直播、私密视频、受访问限制的视频以及没有原生字幕的视频可能无法使用。详情见 [PRIVACY.md](PRIVACY.md) 和 [SECURITY.md](SECURITY.md)。
 
-## 审核与发布
-
-- 自动测试：**83 项通过，0 项失败**。
-- 发布包：**25 个明确白名单文件**。
-- 检查范围包括 JavaScript 语法、功能回归、凭据模式、私钥块、GitHub Token 和 Obsidian Vault ID。
-- 自动测试不能替代使用用户自己服务账号完成的真实视频冒烟测试。
-
-完整结果见 [AUDIT.zh-CN.md](AUDIT.zh-CN.md)。下载 [YouTube Digest Learning Companion v1.3.0](https://github.com/guoduan3727-alt/youtube-digest-learning-companion/releases/tag/v1.3.0)。
-
 ## 来源、贡献者与许可证
 
 本仓库保留原项目历史和 Zara Zhang 的 MIT 版权声明。详见 [NOTICE.md](NOTICE.md)、[CONTRIBUTORS.md](CONTRIBUTORS.md)、上游 [Contributors 图](https://github.com/zarazhangrui/youtube-digest/graphs/contributors)和 [LICENSE](LICENSE)。
