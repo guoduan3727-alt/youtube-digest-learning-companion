@@ -17,7 +17,7 @@ test("manifest uses minimized install-time permissions", () => {
   assert.ok(!manifest.permissions.includes("activeTab"));
   assert.ok(manifest.host_permissions.includes("https://api.deepseek.com/*"));
   assert.equal(Object.hasOwn(manifest, "optional_host_permissions"), false);
-  assert.equal(manifest.version, "1.1.7");
+  assert.equal(manifest.version, "1.3.0");
 });
 
 test("release copy documents current scope without em dashes", () => {
@@ -39,6 +39,9 @@ test("release copy documents current scope without em dashes", () => {
     /\bYT Digest\b/,
   );
   assert.match(readme, /^# YouTube Digest$/m);
+  assert.match(readme, /Zara Zhang's original YouTube Digest/);
+  assert.match(readme, /Contributors and attribution/);
+  assert.match(readme, /enhanced v1\.3\.0 edition/);
   assert.match(
     readme,
     /Turn every YouTube video into a resource for deep learning\./,
@@ -64,6 +67,8 @@ test("release copy documents current scope without em dashes", () => {
   assert.match(readme, /upstream issues and pull requests are not accepted/i);
   assert.doesNotMatch(readme, /^## Contributing$/m);
   assert.match(chineseReadme, /^# YouTube Digest$/m);
+  assert.match(chineseReadme, /Zara Zhang 的原始 YouTube Digest 项目/);
+  assert.match(chineseReadme, /增强版 v1\.3\.0 新增功能/);
   assert.match(chineseReadme, /把每个 YouTube 视频变成一份可以深入学习的资料/);
   assert.match(chineseReadme, /^## 让你的编程 Agent 帮你安装$/m);
   assert.match(
@@ -97,19 +102,23 @@ test("release copy documents current scope without em dashes", () => {
   assert.match(readme, /platform\.deepseek\.com\/api_keys/i);
   assert.match(readme, /api-docs\.deepseek\.com/i);
   assert.match(readme, /api-docs\.deepseek\.com\/quick_start\/pricing/i);
-  assert.match(readme, /api-docs\.deepseek\.com\/quick_start\/token_usage/i);
-  assert.match(readme, /api-docs\.deepseek\.com\/guides\/kv_cache/i);
-  assert.match(readme, /\$0\.0028[\s\S]*\$0\.14[\s\S]*\$0\.28/);
-  assert.match(readme, /2,935 spoken English words/i);
-  assert.match(readme, /about 32,600 input tokens/i);
-  assert.match(readme, /\$0\.002[^\n]*\$0\.006 USD/i);
+  assert.match(readme, /\$0\.007[\s\S]*\$0\.014/);
+  assert.match(readme, /\$0\.22[\s\S]*\$0\.44/);
+  assert.match(readme, /\$0\.66[\s\S]*\$1\.32/);
+  assert.match(readme, /01:00–04:00[\s\S]*06:00–10:00 UTC/);
+  assert.match(readme, /20-minute English talk/i);
+  assert.match(readme, /32,600 input tokens/i);
+  assert.match(readme, /\$0\.003[^\n]*\$0\.010 USD/i);
+  assert.match(readme, /\$0\.005[^\n]*\$0\.020 USD/i);
   assert.match(chineseReadme, /api-docs\.deepseek\.com\/quick_start\/pricing/i);
-  assert.match(chineseReadme, /api-docs\.deepseek\.com\/quick_start\/token_usage/i);
-  assert.match(chineseReadme, /api-docs\.deepseek\.com\/guides\/kv_cache/i);
-  assert.match(chineseReadme, /\u00a50\.02[\s\S]*\u00a51[\s\S]*\u00a52/);
-  assert.match(chineseReadme, /2,935 \u4e2a\u82f1\u6587\u53e3\u8bed\u8bcd/);
-  assert.match(chineseReadme, /\u7ea6 32,600 \u4e2a\u8f93\u5165 token/);
-  assert.match(chineseReadme, /\$0\.002[^\n]*\$0\.006 USD/);
+  assert.match(chineseReadme, /\$0\.007[\s\S]*\$0\.014/);
+  assert.match(chineseReadme, /\$0\.22[\s\S]*\$0\.44/);
+  assert.match(chineseReadme, /\$0\.66[\s\S]*\$1\.32/);
+  assert.match(chineseReadme, /UTC 01:00–04:00[\s\S]*06:00–10:00/);
+  assert.match(chineseReadme, /20 \u5206\u949f\u82f1\u6587\u89c6\u9891/);
+  assert.match(chineseReadme, /32,600 \u4e2a\u8f93\u5165 token/);
+  assert.match(chineseReadme, /\$0\.003[^\n]*\$0\.010 USD/);
+  assert.match(chineseReadme, /\$0\.005[^\n]*\$0\.020 USD/);
   assert.match(chineseReadme, /dash\.supadata\.ai\/auth\/sign-up/i);
   assert.match(chineseReadme, /platform\.deepseek\.com\/api_keys/i);
   assert.match(readme, /^### The Digest button is missing on a YouTube video$/m);
@@ -194,6 +203,66 @@ test("release copy documents current scope without em dashes", () => {
   assert.match(read("background.js"), /"vocabulary\.md"/);
   assert.match(read("PRIVACY.md"), /obsidian:\/\/new/);
   assert.match(read("sidepanel.js"), /Generate dictionary meanings/);
+
+  const contributors = read("CONTRIBUTORS.md");
+  assert.match(contributors, /Zara Zhang \(@zarazhangrui\)/);
+  assert.match(contributors, /guoduan3727-alt/);
+  assert.match(contributors, /OpenAI Codex/);
+  assert.match(contributors, /youtube-digest\/graphs\/contributors/);
+  assert.match(read("LICENSE"), /Copyright \(c\) 2026 Zara Zhang/);
+});
+
+test("product UI contains no emoji or emoji-like pictographs", () => {
+  const productUi = [
+    read("sidepanel.html"),
+    read("sidepanel.js"),
+    read("content.js"),
+    read("options.html"),
+    read("options.js"),
+  ].join("\n");
+
+  assert.doesNotMatch(
+    productUi,
+    /\p{Extended_Pictographic}|[✓✕⧉▶]/u,
+  );
+  assert.doesNotMatch(productUi, /&#(?:9655|9888);/);
+});
+
+test("selection actions use three equal edge-to-edge hover areas", () => {
+  const css = read("sidepanel.css");
+
+  assert.match(
+    css,
+    /\.explain-tooltip\s*\{[^}]*padding:\s*0;[^}]*overflow:\s*hidden;/,
+  );
+  assert.match(
+    css,
+    /\.explain-btn,\s*\.selection-note-btn,\s*\.add-word-btn\s*\{[^}]*flex:\s*1 1 33\.333%;[^}]*border-radius:\s*0;/,
+  );
+  assert.match(
+    css,
+    /\.explain-tooltip\s*\{[^}]*animation:\s*selectionToolbarIn/,
+  );
+  assert.match(
+    css,
+    /@keyframes selectionToolbarIn\s*\{[\s\S]*transform:\s*translate\(-50%, 4px\);[\s\S]*transform:\s*translate\(-50%, 0\);/,
+  );
+});
+
+test("note delete is an accessible SVG action at the end of the action row", () => {
+  const js = read("sidepanel.js");
+  const css = read("sidepanel.css");
+
+  assert.match(
+    js,
+    /<div class="note-actions">[\s\S]*class="[^"]*note-play[^"]*"[\s\S]*class="note-delete"[\s\S]*aria-label="Delete note"[\s\S]*<svg viewBox="0 0 24 24" aria-hidden="true">/,
+  );
+  assert.doesNotMatch(js, /class="note-delete"[^>]*>Delete<\/button>/);
+  assert.match(
+    css,
+    /\.note-delete\s*\{[^}]*place-items:\s*center;[^}]*margin-left:\s*auto;/,
+  );
+  assert.match(css, /\.note-delete:focus-visible\s*\{[^}]*outline:/);
 });
 
 test("notes filters preserve selected contrast and expose pressed state", () => {
@@ -239,6 +308,27 @@ test("runtime has no source-file credential dependency or retired model", () => 
   assert.doesNotMatch(runtime, /importScripts\(["']config\.js/);
   assert.doesNotMatch(runtime, /\bdeepseek-chat\b/);
   assert.match(runtime, /deepseek-v4-flash/);
+});
+
+test("background reconciles side-panel state after navigation commits", () => {
+  const background = read("background.js");
+
+  assert.match(
+    background,
+    /function getNavigationUrl\(changeInfo, tab\)[\s\S]*changeInfo\.status !== "loading"[\s\S]*changeInfo\.status !== "complete"[\s\S]*tab\.pendingUrl \|\| tab\.url/,
+  );
+  assert.match(
+    background,
+    /chrome\.tabs\.onUpdated\.addListener\(\(tabId, changeInfo, tab\)[\s\S]*getNavigationUrl\(changeInfo, tab\)[\s\S]*updatePanelForTab\(tabId, url, tab\.windowId\)/,
+  );
+  assert.match(
+    background,
+    /function closePanelForTab\(tabId, windowId\)[\s\S]*chrome\.sidePanel\.close\(\{ tabId \}\)[\s\S]*chrome\.sidePanel\.close\(\{ windowId \}\)/,
+  );
+  assert.match(
+    background,
+    /await closePanelForTab\(tabId, windowId\);[\s\S]*setOptions\(\{ tabId, enabled: false \}\)/,
+  );
 });
 
 test("retired Remix and reader files are absent", () => {

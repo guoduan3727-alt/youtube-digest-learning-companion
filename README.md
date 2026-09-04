@@ -14,11 +14,33 @@ Turn every YouTube video into a resource for deep learning. YouTube Digest bring
 
 YouTube Digest is a bring-your-own-key project installed locally from GitHub. It is not available through the Chrome Web Store, does not include API credits, and does not run a developer-operated server.
 
+This enhanced edition is derived from [Zara Zhang's original YouTube Digest](https://github.com/zarazhangrui/youtube-digest) and retains the full upstream history and MIT license. It is independently maintained and is not presented as an official upstream release. See [Contributors and attribution](CONTRIBUTORS.md), including the original author and the role of OpenAI Codex.
+
+![YouTube Digest demo](YouTube%20Digest%20demo.png)
+
+## New in this enhanced v1.3.0 edition
+
+- Build a deduplicated vocabulary notebook from selected transcript words or phrases.
+- Merge repeated words into one entry while appending distinct timestamped contexts from multiple videos.
+- Generate bilingual dictionary senses, pronunciation, examples, and sentence-specific analysis with DeepSeek.
+- Create or update readable per-word Markdown notes through Obsidian's official URI, without a community plugin.
+- Show independently controlled bilingual subtitles at the bottom of the YouTube player in regular, theater, and full-screen modes.
+- Share one base subtitle translation cache and in-flight request pool between the player and Full Transcript to avoid duplicate DeepSeek calls.
+- Preserve and integrate all upstream v1.2.0 features listed below.
+
+### Upstream v1.2.0 features retained
+
+- Search transcript words or phrases and move through every match.
+- Use one Original, Chinese, or bilingual setting across Transcript, Overview, and Notes. New videos stay in Original by default.
+- Translate visible Overview and Notes content progressively in small cached batches.
+- Explain selected transcript text or save it directly as a timestamped note.
+- Keep your transcript position across navigation, with the panel closing automatically outside YouTube video pages.
+
 ## Install with your coding agent
 
 You do not need to understand the code or use the command line. Send this message to your coding agent:
 
-> Download or clone this project into a permanent folder I choose, tell me its exact full path, and use that same folder for Chrome's Load unpacked step. If I need a suggestion during this first installation, offer `~/Documents/youtube-digest` on macOS or Linux, or `%USERPROFILE%\Documents\youtube-digest` on Windows, but do not assume either path. Walk me through installation and setup in simple terms. https://github.com/zarazhangrui/youtube-digest
+> Download or clone this project into a permanent folder I choose, tell me its exact full path, and use that same folder for Chrome's Load unpacked step. If I need a suggestion during this first installation, offer `~/Documents/youtube-digest` on macOS or Linux, or `%USERPROFILE%\Documents\youtube-digest` on Windows, but do not assume either path. Walk me through installation and setup in simple terms. https://github.com/guoduan3727-alt/youtube-digest-enhanced
 
 Your agent should:
 
@@ -36,7 +58,7 @@ Never paste an API key into an AI chat, source file, screenshot, or public messa
 
 If you prefer to do it yourself:
 
-1. Open [github.com/zarazhangrui/youtube-digest](https://github.com/zarazhangrui/youtube-digest).
+1. Open [github.com/guoduan3727-alt/youtube-digest-enhanced](https://github.com/guoduan3727-alt/youtube-digest-enhanced).
 2. Choose **Code**, then **Download ZIP**.
 3. Choose a permanent folder and unzip the project there. Optional suggestions are `~/Documents/youtube-digest` on macOS or Linux, or `%USERPROFILE%\Documents\youtube-digest` on Windows. You may use a different folder.
 4. In Chrome, open `chrome://extensions`.
@@ -143,23 +165,26 @@ The [Supadata transcript documentation](https://docs.supadata.ai/get-transcript)
 
 With the current native-only behavior, the free tier can cover roughly 100 transcript lookups per month when each request succeeds once. Retries and unavailable-caption lookups also consume credits, so actual successful-video coverage can be lower.
 
-DeepSeek usage is separate from Supadata. DeepSeek may apply its own free quota, rate limits, or charges. YouTube Digest does not collect payments or resell access. Set spending limits and monitor both accounts. The estimate below explains the current DeepSeek translation cost.
+DeepSeek usage is separate from Supadata. YouTube Digest does not collect payments or resell access. Set spending limits and monitor both accounts.
 
-## DeepSeek V4 Flash translation cost estimate
+## DeepSeek V4 Flash pricing
 
-Current as of August 10, 2026, DeepSeek lists the following prices per 1 million tokens on its official [pricing page](https://api-docs.deepseek.com/quick_start/pricing/):
+As of August 27, 2026, DeepSeek lists these USD prices per 1 million tokens on its official [pricing page](https://api-docs.deepseek.com/quick_start/pricing/):
 
-- Cache-hit input: **$0.0028 USD**.
-- Cache-miss input: **$0.14 USD**.
-- Output: **$0.28 USD**.
+| Token type | Off-peak | Peak |
+| --- | ---: | ---: |
+| Cache-hit input | $0.007 | $0.014 |
+| Cache-miss input | $0.22 | $0.44 |
+| Output | $0.66 | $1.32 |
 
-DeepSeek says these prices may increase soon, so check the current pricing page before relying on this estimate. Its official [token usage guide](https://api-docs.deepseek.com/quick_start/token_usage/) estimates about 0.3 token per English character and about 0.6 token per Chinese character. Its [context caching guide](https://api-docs.deepseek.com/guides/kv_cache/) explains the automatic best-effort disk cache used for repeated prefixes.
+Peak hours are 01:00–04:00 and 06:00–10:00 UTC, Monday through Friday. All other hours use off-peak rates.
 
-A measured 20-minute English talk contained **2,935 spoken English words** and 15,433 transcript characters. With YouTube Digest's current grouping, it became 128 semantic segments and 43 requests of three segments each. Repeated prompts and JSON brought the rendered input to about 108,528 English characters, or **about 32,600 input tokens** using DeepSeek's 0.3 token per English character heuristic. The translated Chinese JSON output is estimated at about 3,500 to 4,500 tokens using the 0.6 token per Chinese character heuristic, plus JSON and ID overhead.
+A measured 20-minute English talk used about **32,600 input tokens** and an estimated **3,500 to 4,500 output tokens** across 43 small translation batches. At current prices, translating the full video costs approximately:
 
-If all input is billed as cache miss, input costs about $0.0046 and output costs about $0.0010 to $0.0013, for a total of about $0.0056 to $0.0059. When much of the repeated system prompt hits DeepSeek's automatic best-effort cache, a realistic lower end is about $0.002 to $0.003. A practical estimate for fully translating this talk is therefore **$0.002 to $0.006 USD, about ¥0.02 to ¥0.04**.
+- **Off-peak: $0.003 to $0.010 USD**.
+- **Peak: $0.005 to $0.020 USD**.
 
-Side-panel translation is lazy and progressive, so only rows you approach by scrolling incur calls. Enabling **播放器双语** progressively translates the complete video from the current playback position so viewing can continue without gaps. Both surfaces share one base-cue cache and any translation already in flight, so enabling them together does not duplicate a request for the same cue. Retries, provider behavior, and pricing changes can still increase the final cost.
+The lower end assumes most repeated input hits DeepSeek's cache, while the upper end assumes cache misses. Side-panel translation is lazy and progressive, so only rows you approach by scrolling incur calls. Enabling **播放器双语** progressively translates the complete video from the current playback position so viewing can continue without gaps. Both surfaces share one base-cue cache and any translation already in flight, so enabling them together does not duplicate a request for the same cue. Retries, provider behavior, and pricing changes can still increase the final cost, so check the official page before relying on these prices.
 
 ## Remix it with your coding agent
 

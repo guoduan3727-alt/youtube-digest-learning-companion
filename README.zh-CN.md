@@ -14,11 +14,35 @@
 
 YouTube Digest 是一个需要自行提供 API Key 的开源项目，通过 GitHub 安装。目前没有上架 Chrome 应用商店，不赠送 API 额度，也没有开发者运营的服务器。
 
+这个增强版基于 [Zara Zhang 的原始 YouTube Digest 项目](https://github.com/zarazhangrui/youtube-digest)继续开发，完整保留上游 Git 历史和 MIT 许可证，由增强版维护者独立维护，不代表上游官方发布。原作者、历史贡献者以及 OpenAI Codex 的协助说明见 [Contributors and attribution](CONTRIBUTORS.md)。
+
+点击查看演示和教学视频（小白友好）：[https://www.bilibili.com/video/BV1dnuq6dEak/](https://www.bilibili.com/video/BV1dnuq6dEak/)
+
+![YouTube Digest 双语演示](YouTube%20Digest%20demo%20bilingual.png)
+
+## 增强版 v1.3.0 新增功能
+
+- 从字幕中选中单词或短语，建立自动去重的单词本。
+- 同一单词只保留一个词条，在不同视频或不同时间点再次遇到时追加语境。
+- 使用 DeepSeek 补充音标、多个双语义项、对应例句和视频原句分析。
+- 通过 Obsidian 官方 URI 创建或更新可读的独立单词 Markdown 笔记，不需要社区插件。
+- 在普通、剧院和全屏模式下，将可独立开关的双语字幕显示在 YouTube 播放器底部。
+- 播放器与 Full Transcript 共用基础字幕翻译缓存和正在执行的请求，避免重复调用 DeepSeek。
+- 完整保留并整合下方列出的上游 v1.2.0 功能。
+
+### 保留的上游 v1.2.0 功能
+
+- 搜索字幕中的单词或短语，并依次查看所有匹配位置。
+- 在 Transcript、Overview 和 Notes 中共用 Original、中文和双语设置。新视频默认保持 Original，不会自动消耗翻译 token。
+- 只翻译当前可见的 Overview 和 Notes 内容，并通过小批次渐进显示和缓存结果。
+- 选中字幕后，可以直接讲解内容或保存带时间戳的笔记。
+- 页面跳转后保留字幕阅读位置，并在离开 YouTube 视频页面时自动关闭侧边栏。
+
 ## 让你的编程 Agent 帮你安装
 
 你不需要看懂代码，也不需要会使用命令行。把下面这段话发送给你的编程 Agent：
 
-> 请把这个项目下载或克隆到我选择的长期保留文件夹，告诉我准确的完整路径，并让 Chrome“加载已解压的扩展程序”使用同一个文件夹。如果我在第一次安装时需要位置建议，可以推荐 macOS 或 Linux 上的 `~/Documents/youtube-digest`，或 Windows 上的 `%USERPROFILE%\Documents\youtube-digest`，但不要假设我一定使用这些路径。请用简单易懂的语言一步一步指导我完成安装和配置。https://github.com/zarazhangrui/youtube-digest
+> 请把这个项目下载或克隆到我选择的长期保留文件夹，告诉我准确的完整路径，并让 Chrome“加载已解压的扩展程序”使用同一个文件夹。如果我在第一次安装时需要位置建议，可以推荐 macOS 或 Linux 上的 `~/Documents/youtube-digest`，或 Windows 上的 `%USERPROFILE%\Documents\youtube-digest`，但不要假设我一定使用这些路径。请用简单易懂的语言一步一步指导我完成安装和配置。https://github.com/guoduan3727-alt/youtube-digest-enhanced
 
 你的 Agent 应该帮你：
 
@@ -36,7 +60,7 @@ YouTube Digest 是一个需要自行提供 API Key 的开源项目，通过 GitH
 
 如果你想自己操作：
 
-1. 打开 [github.com/zarazhangrui/youtube-digest](https://github.com/zarazhangrui/youtube-digest)。
+1. 打开 [github.com/guoduan3727-alt/youtube-digest-enhanced](https://github.com/guoduan3727-alt/youtube-digest-enhanced)。
 2. 点击 **Code**，再选择 **Download ZIP**。
 3. 选择一个长期保留的文件夹，并把项目解压到这里。可选建议是 macOS 或 Linux 上的 `~/Documents/youtube-digest`，或 Windows 上的 `%USERPROFILE%\Documents\youtube-digest`。你也可以使用其他文件夹。
 4. 在 Chrome 地址栏打开 `chrome://extensions`。
@@ -143,23 +167,26 @@ YouTube Digest 强制使用 Supadata 的 `mode=native`，不会在没有原生�
 
 按照当前只获取原生字幕的方式，如果每次请求都成功，免费版每月大约可以查询 100 个视频。重试和没有字幕的查询也会消耗额度，所以实际成功数量可能更少。
 
-DeepSeek 的额度与 Supadata 分开计算。DeepSeek 可能有自己的免费额度、限速或费用。YouTube Digest 不收款，也不转售 API 服务。建议为两个账号设置消费上限并定期查看用量。下方估算说明了当前 DeepSeek 翻译成本。
+DeepSeek 的额度与 Supadata 分开计算。YouTube Digest 不收款，也不转售 API 服务。建议为两个账号设置消费上限并定期查看用量。
 
-## DeepSeek V4 Flash 翻译成本估算
+## DeepSeek V4 Flash 价格
 
-截至 2026 年 8 月 10 日，DeepSeek 官方[价格页面](https://api-docs.deepseek.com/quick_start/pricing/)列出的每 100 万 token 价格是：
+截至 2026 年 8 月 27 日，DeepSeek 官方[价格页面](https://api-docs.deepseek.com/quick_start/pricing/)列出的每 100 万 token 美元价格如下：
 
-- 缓存命中输入：**¥0.02**。
-- 缓存未命中输入：**¥1**。
-- 输出：**¥2**。
+| Token 类型 | 非高峰 | 高峰 |
+| --- | ---: | ---: |
+| 缓存命中输入 | $0.007 | $0.014 |
+| 缓存未命中输入 | $0.22 | $0.44 |
+| 输出 | $0.66 | $1.32 |
 
-DeepSeek 说明这些价格可能很快上调，因此使用此估算前必须查看当前价格页面。官方 [token 用量指南](https://api-docs.deepseek.com/quick_start/token_usage/)估算每个英文字符约为 0.3 token，每个中文字符约为 0.6 token。[上下文缓存指南](https://api-docs.deepseek.com/guides/kv_cache/)说明了重复前缀使用的自动尽力而为磁盘缓存。
+高峰时段为周一至周五 UTC 01:00–04:00 和 06:00–10:00，其他时间使用非高峰价格。
 
-一个实测的 20 分钟英文演讲包含 **2,935 个英文口语词**和 15,433 个字幕字符。按 YouTube Digest 当前的分组方式，它会变成 128 个语义分段，以每次 3 段的方式发出 43 次请求。算上重复 prompt 和 JSON 后，渲染后的输入约为 108,528 个英文字符，按官方每个英文字符 0.3 token 的经验值，即**约 32,600 个输入 token**。按每个中文字符 0.6 token 的经验值，再加上 JSON 和 ID 开销，中文 JSON 输出估计为 3,500 到 4,500 token。
+一个实测的 20 分钟英文视频使用约 **32,600 个输入 token**，并在 43 个小批次中产生约 **3,500 到 4,500 个输出 token**。按当前价格，完整翻译该视频的费用约为：
 
-如果所有输入都按缓存未命中计费，输入约 $0.0046，输出约 $0.0010 到 $0.0013，总计约 $0.0056 到 $0.0059。当大量重复的 system prompt 命中 DeepSeek 自动尽力而为缓存时，更现实的低值约为 $0.002 到 $0.003。完整翻译这段演讲的实用估算是 **$0.002 到 $0.006 USD，约 ¥0.02 到 ¥0.04**。
+- **非高峰：$0.003 到 $0.010 USD**。
+- **高峰：$0.005 到 $0.020 USD**。
 
-右侧面板翻译是延迟按需和渐进式的，只有滚动到并请求的字幕行才会发起调用。开启 **播放器双语** 后，为了连续观看，插件会从当前播放位置开始并逐步翻译完整视频。两种方式共用基础字幕缓存和正在进行的翻译请求，同一句不会因为两个入口同时开启而重复调用 API；重试、服务商行为和价格变化仍可能增加最终成本。
+低值假设大部分重复输入命中 DeepSeek 缓存，高值假设输入未命中缓存。右侧面板翻译是延迟按需和渐进式的，只有滚动到并请求的字幕行才会发起调用。开启 **播放器双语** 后，为了连续观看，插件会从当前播放位置开始并逐步翻译完整视频。两种方式共用基础字幕缓存和正在进行的翻译请求，同一句不会因为两个入口同时开启而重复调用 API；重试、服务商行为和价格变化仍可能增加最终成本，使用前请查看官方页面确认最新价格。
 
 ## 用编程 Agent 改造成自己的版本
 

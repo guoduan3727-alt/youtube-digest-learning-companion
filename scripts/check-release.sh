@@ -46,6 +46,7 @@ public_allowlist=(
   "prompts/vocabulary.md"
   "README.md"
   "README.zh-CN.md"
+  "CONTRIBUTORS.md"
   "PRIVACY.md"
   "SECURITY.md"
   "LICENSE"
@@ -65,6 +66,7 @@ required_public_files=(
   "icons/icon128.png"
   "README.md"
   "README.zh-CN.md"
+  "CONTRIBUTORS.md"
   "PRIVACY.md"
   "SECURITY.md"
   "LICENSE"
@@ -256,6 +258,10 @@ const patterns = [
   [
     "credential assignment",
     /\b(?:api[_-]?key|secret|access[_-]?token|auth[_-]?token)\b\s*[:=]\s*["'][^"'\s]{16,}["']/gi,
+  ],
+  [
+    "Obsidian vault identifier",
+    /\bvault(?:Id)?\b\s*[:=]\s*["'][a-f0-9]{12,}["']/gi,
   ],
 ];
 
