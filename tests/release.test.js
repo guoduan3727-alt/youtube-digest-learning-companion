@@ -38,7 +38,7 @@ test("release copy documents current scope without em dashes", () => {
     [readme, chineseReadme, read("PRIVACY.md"), read("SECURITY.md")].join("\n"),
     /\bYT Digest\b/,
   );
-  assert.match(readme, /^# YouTube Digest$/m);
+  assert.match(readme, /^# YouTube Digest Learning Companion$/m);
   assert.match(readme, /Zara Zhang's original YouTube Digest/);
   assert.match(readme, /Project lineage:[\s\S]*@zarazhangrui/);
   assert.match(readme, /Contributors and attribution/);
@@ -67,7 +67,7 @@ test("release copy documents current scope without em dashes", () => {
   );
   assert.match(readme, /upstream issues and pull requests are not accepted/i);
   assert.doesNotMatch(readme, /^## Contributing$/m);
-  assert.match(chineseReadme, /^# YouTube Digest$/m);
+  assert.match(chineseReadme, /^# YouTube Digest Learning Companion$/m);
   assert.match(chineseReadme, /Zara Zhang 的原始 YouTube Digest 项目/);
   assert.match(chineseReadme, /项目来源：[\s\S]*@zarazhangrui/);
   assert.match(chineseReadme, /增强版 v1\.3\.0 新增功能/);
@@ -216,6 +216,10 @@ test("release copy documents current scope without em dashes", () => {
   assert.match(notice, /directly based on that project/);
   assert.match(notice, /Zara Zhang \(@zarazhangrui\)/);
   assert.match(notice, /OpenAI Codex/);
+  assert.match(readme, /^## Development credits$/m);
+  assert.match(chineseReadme, /^## 开发贡献$/m);
+  assert.match(readme, /Codex has no project-specific GitHub identity/);
+  assert.match(chineseReadme, /不创建虚假账号/);
 });
 
 test("product UI contains no emoji or emoji-like pictographs", () => {

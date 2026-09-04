@@ -1,6 +1,6 @@
 # Attribution notice
 
-YouTube Digest Enhanced incorporates and modifies the source code of [YouTube Digest](https://github.com/zarazhangrui/youtube-digest), originally created by [Zara Zhang (@zarazhangrui)](https://github.com/zarazhangrui).
+YouTube Digest Learning Companion continues development directly on the source code of the original [YouTube Digest](https://github.com/zarazhangrui/youtube-digest) project created by [Zara Zhang (@zarazhangrui)](https://github.com/zarazhangrui).
 
 This enhanced edition is directly based on that project. It is not merely inspired by it and is not an unrelated reimplementation. The complete upstream Git history is retained, and the original copyright notice remains in [LICENSE](LICENSE):
 

@@ -1,4 +1,4 @@
-# YouTube Digest Enhanced v1.3.0 audit
+# YouTube Digest Learning Companion v1.3.0 audit
 
 [中文审核报告](AUDIT.zh-CN.md) | [README](README.md) | [Contributors](CONTRIBUTORS.md)
 

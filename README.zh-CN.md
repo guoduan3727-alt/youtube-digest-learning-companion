@@ -1,9 +1,9 @@
-# YouTube Digest
+# YouTube Digest Learning Companion
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
 > [!IMPORTANT]
-> **项目来源：** 本增强版直接基于 [Zara Zhang 的 YouTube Digest 项目（@zarazhangrui）](https://github.com/zarazhangrui/youtube-digest)继续完善，是对原代码库的扩展，并非无关的重新实现。Zara Zhang 是原作者；项目保留完整上游 Git 历史和原 MIT 版权声明。本增强版由我们独立维护，不代表原作者对增强版背书。详见 [NOTICE](NOTICE.md) 和[贡献者说明](CONTRIBUTORS.md)。
+> **项目来源：** 本项目是在 [Zara Zhang（@zarazhangrui）](https://github.com/zarazhangrui)创建的原始 [YouTube Digest](https://github.com/zarazhangrui/youtube-digest) 项目基础上继续完善，是对她原代码库的直接扩展，并非无关的重新实现。项目保留完整上游 Git 历史和 Zara Zhang 的原 MIT 版权声明。本增强版由我们独立维护，不代表原作者对增强版背书。详见 [NOTICE](NOTICE.md) 和[贡献者说明](CONTRIBUTORS.md)。
 
 把每个 YouTube 视频变成一份可以深入学习的资料。YouTube Digest 把字幕、双语翻译、AI 概览、内容讲解和时间戳笔记放进同一个 Chrome 侧边栏，让你可以持续学习视频中的知识和语言，同时不丢失原视频上下文。
 
@@ -20,6 +20,16 @@ YouTube Digest 是一个需要自行提供 API Key 的开源项目，通过 GitH
 这个增强版基于 [Zara Zhang 的原始 YouTube Digest 项目（@zarazhangrui）](https://github.com/zarazhangrui/youtube-digest)继续开发，完整保留上游 Git 历史和 MIT 许可证，由增强版维护者独立维护，不代表上游官方发布。原作者、历史贡献者以及 OpenAI Codex 的协助说明见 [Contributors and attribution](CONTRIBUTORS.md)。
 
 **快速导航：** [增强功能](#增强版-v130-新增功能) · [手动安装](#手动安装) · [API-Key 设置](#设置-api-key) · [播放器双语](#使用-youtube-digest) · [单词本与 Obsidian](#使用-obsidian-建立单词本) · [审核报告](AUDIT.zh-CN.md) · [隐私说明](PRIVACY.md)
+
+## 开发贡献
+
+| 贡献者 | 身份 | 主要贡献 |
+| --- | --- | --- |
+| [Zara Zhang (@zarazhangrui)](https://github.com/zarazhangrui) | 原作者、上游维护者 | 创建本增强版直接基于的原始 [YouTube Digest](https://github.com/zarazhangrui/youtube-digest) 项目及核心功能；本项目保留上游历史和 MIT 版权声明。 |
+| [Guoduan37 (@guoduan3727-alt)](https://github.com/guoduan3727-alt) | Learning Companion 维护者 | 提出增强版产品需求，负责整合、测试、文档和公开发布。 |
+| [OpenAI Codex](https://openai.com/codex/) | AI 开发协助 | 协助功能实现、上游合并、回归测试、安全审查和文档整理。 |
+
+GitHub 自动生成的 [Contributors 图](https://github.com/guoduan3727-alt/youtube-digest-learning-companion/graphs/contributors)按照已关联的提交身份统计，因此会显示真实的人类 GitHub 贡献者。Codex 没有供本项目使用的 GitHub 身份或验证提交邮箱，所以通过本表、[CONTRIBUTORS.md](CONTRIBUTORS.md)、[NOTICE.md](NOTICE.md)和提交说明进行准确署名，不创建虚假账号。
 
 点击查看演示和教学视频（小白友好）：[https://www.bilibili.com/video/BV1dnuq6dEak/](https://www.bilibili.com/video/BV1dnuq6dEak/)
 
@@ -48,7 +58,7 @@ YouTube Digest 是一个需要自行提供 API Key 的开源项目，通过 GitH
 
 ## 五分钟开始使用
 
-1. [下载增强版项目 ZIP](https://github.com/guoduan3727-alt/youtube-digest-enhanced/archive/refs/heads/main.zip)，解压到一个长期保留的文件夹。
+1. [下载增强版项目 ZIP](https://github.com/guoduan3727-alt/youtube-digest-learning-companion/archive/refs/heads/main.zip)，解压到一个长期保留的文件夹。
 2. 打开 `chrome://extensions`，启用“开发者模式”，点击“加载已解压的扩展程序”，选择包含 `manifest.json` 的文件夹。
 3. 打开 **Settings**，亲自在设置页面填写 Supadata 和 DeepSeek API Key。不要把 Key 写入文件、AI 对话、截图或 GitHub Issue。
 4. 打开一个带字幕的普通 YouTube 视频，点击 YouTube Digest 扩展图标。
@@ -61,7 +71,7 @@ YouTube Digest 是一个需要自行提供 API Key 的开源项目，通过 GitH
 
 你不需要看懂代码，也不需要会使用命令行。把下面这段话发送给你的编程 Agent：
 
-> 请把这个项目下载或克隆到我选择的长期保留文件夹，告诉我准确的完整路径，并让 Chrome“加载已解压的扩展程序”使用同一个文件夹。如果我在第一次安装时需要位置建议，可以推荐 macOS 或 Linux 上的 `~/Documents/youtube-digest`，或 Windows 上的 `%USERPROFILE%\Documents\youtube-digest`，但不要假设我一定使用这些路径。请用简单易懂的语言一步一步指导我完成安装和配置。https://github.com/guoduan3727-alt/youtube-digest-enhanced
+> 请把这个项目下载或克隆到我选择的长期保留文件夹，告诉我准确的完整路径，并让 Chrome“加载已解压的扩展程序”使用同一个文件夹。如果我在第一次安装时需要位置建议，可以推荐 macOS 或 Linux 上的 `~/Documents/youtube-digest`，或 Windows 上的 `%USERPROFILE%\Documents\youtube-digest`，但不要假设我一定使用这些路径。请用简单易懂的语言一步一步指导我完成安装和配置。https://github.com/guoduan3727-alt/youtube-digest-learning-companion
 
 你的 Agent 应该帮你：
 
@@ -79,7 +89,7 @@ YouTube Digest 是一个需要自行提供 API Key 的开源项目，通过 GitH
 
 如果你想自己操作：
 
-1. 打开 [github.com/guoduan3727-alt/youtube-digest-enhanced](https://github.com/guoduan3727-alt/youtube-digest-enhanced)。
+1. 打开 [github.com/guoduan3727-alt/youtube-digest-learning-companion](https://github.com/guoduan3727-alt/youtube-digest-learning-companion)。
 2. 点击 **Code**，再选择 **Download ZIP**。
 3. 选择一个长期保留的文件夹，并把项目解压到这里。可选建议是 macOS 或 Linux 上的 `~/Documents/youtube-digest`，或 Windows 上的 `%USERPROFILE%\Documents\youtube-digest`。你也可以使用其他文件夹。
 4. 在 Chrome 地址栏打开 `chrome://extensions`。

@@ -1,4 +1,4 @@
-# YouTube Digest 增强版 v1.3.0 功能审核
+# YouTube Digest Learning Companion v1.3.0 功能审核
 
 [English audit](AUDIT.md) | [中文 README](README.zh-CN.md) | [贡献者与署名](CONTRIBUTORS.md)
 

@@ -1,9 +1,9 @@
-# YouTube Digest
+# YouTube Digest Learning Companion
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
 > [!IMPORTANT]
-> **Project lineage:** This enhanced edition is built directly on [Zara Zhang's YouTube Digest project (@zarazhangrui)](https://github.com/zarazhangrui/youtube-digest). It extends that codebase; it is not an unrelated reimplementation. Zara Zhang is the original creator, the upstream Git history and MIT copyright are retained, and this independently maintained edition does not imply upstream endorsement. See [NOTICE](NOTICE.md) and [Contributors](CONTRIBUTORS.md).
+> **Project lineage:** This project continues development directly on the original YouTube Digest codebase created by [Zara Zhang (@zarazhangrui)](https://github.com/zarazhangrui), available at [zarazhangrui/youtube-digest](https://github.com/zarazhangrui/youtube-digest). It is an enhancement of her project, not an unrelated reimplementation. The upstream Git history and Zara Zhang's MIT copyright are retained, and this independently maintained edition does not imply her endorsement. See [NOTICE](NOTICE.md) and [Contributors](CONTRIBUTORS.md).
 
 Turn every YouTube video into a resource for deep learning. YouTube Digest brings transcripts, bilingual translation, AI overviews, explanations, and timestamped notes into one Chrome side panel, so you can study ideas and language without losing your place.
 
@@ -20,6 +20,16 @@ YouTube Digest is a bring-your-own-key project installed locally from GitHub. It
 This enhanced edition is derived from [Zara Zhang's original YouTube Digest (@zarazhangrui)](https://github.com/zarazhangrui/youtube-digest) and retains the full upstream history and MIT license. It is independently maintained and is not presented as an official upstream release. See [Contributors and attribution](CONTRIBUTORS.md), including the original author and the role of OpenAI Codex.
 
 **Quick links:** [Enhanced features](#new-in-this-enhanced-v130-edition) · [Install](#install-manually) · [API setup](#set-up-your-api-keys) · [Player subtitles](#use-youtube-digest) · [Vocabulary and Obsidian](#build-a-vocabulary-notebook-with-obsidian) · [Audit report](AUDIT.md) · [Privacy](PRIVACY.md)
+
+## Development credits
+
+| Contributor | Role | Contribution |
+| --- | --- | --- |
+| [Zara Zhang (@zarazhangrui)](https://github.com/zarazhangrui) | Original creator and upstream maintainer | Created the original [YouTube Digest](https://github.com/zarazhangrui/youtube-digest) project on which this edition is directly based. The upstream history and MIT copyright are retained. |
+| [Guoduan37 (@guoduan3727-alt)](https://github.com/guoduan3727-alt) | Learning Companion maintainer | Directed the enhanced product requirements, integration, testing, documentation, and public release. |
+| [OpenAI Codex](https://openai.com/codex/) | AI development assistant | Assisted with implementation, upstream integration, regression tests, security review, and documentation. |
+
+GitHub's automatic [Contributors graph](https://github.com/guoduan3727-alt/youtube-digest-learning-companion/graphs/contributors) lists linked commit identities, so it correctly shows the human GitHub contributors. Codex has no project-specific GitHub identity or verified commit email and is therefore credited here, in [CONTRIBUTORS.md](CONTRIBUTORS.md), [NOTICE.md](NOTICE.md), and commit trailers instead of through a fabricated account.
 
 ![YouTube Digest demo](YouTube%20Digest%20demo.png)
 
@@ -46,7 +56,7 @@ Every item above is additive. The original transcript, Overview, Notes, search, 
 
 ## Five-minute start
 
-1. [Download this enhanced repository](https://github.com/guoduan3727-alt/youtube-digest-enhanced/archive/refs/heads/main.zip) and extract it to a permanent folder.
+1. [Download this enhanced repository](https://github.com/guoduan3727-alt/youtube-digest-learning-companion/archive/refs/heads/main.zip) and extract it to a permanent folder.
 2. Open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select the folder containing `manifest.json`.
 3. Open **Settings** and enter your own Supadata and DeepSeek API keys directly. Do not put keys in a file, chat, screenshot, or GitHub issue.
 4. Open a standard YouTube video with captions and click the YouTube Digest extension icon.
@@ -59,7 +69,7 @@ The detailed installation, provider setup, feature behavior, costs, privacy note
 
 You do not need to understand the code or use the command line. Send this message to your coding agent:
 
-> Download or clone this project into a permanent folder I choose, tell me its exact full path, and use that same folder for Chrome's Load unpacked step. If I need a suggestion during this first installation, offer `~/Documents/youtube-digest` on macOS or Linux, or `%USERPROFILE%\Documents\youtube-digest` on Windows, but do not assume either path. Walk me through installation and setup in simple terms. https://github.com/guoduan3727-alt/youtube-digest-enhanced
+> Download or clone this project into a permanent folder I choose, tell me its exact full path, and use that same folder for Chrome's Load unpacked step. If I need a suggestion during this first installation, offer `~/Documents/youtube-digest` on macOS or Linux, or `%USERPROFILE%\Documents\youtube-digest` on Windows, but do not assume either path. Walk me through installation and setup in simple terms. https://github.com/guoduan3727-alt/youtube-digest-learning-companion
 
 Your agent should:
 
@@ -77,7 +87,7 @@ Never paste an API key into an AI chat, source file, screenshot, or public messa
 
 If you prefer to do it yourself:
 
-1. Open [github.com/guoduan3727-alt/youtube-digest-enhanced](https://github.com/guoduan3727-alt/youtube-digest-enhanced).
+1. Open [github.com/guoduan3727-alt/youtube-digest-learning-companion](https://github.com/guoduan3727-alt/youtube-digest-learning-companion).
 2. Choose **Code**, then **Download ZIP**.
 3. Choose a permanent folder and unzip the project there. Optional suggestions are `~/Documents/youtube-digest` on macOS or Linux, or `%USERPROFILE%\Documents\youtube-digest` on Windows. You may use a different folder.
 4. In Chrome, open `chrome://extensions`.
