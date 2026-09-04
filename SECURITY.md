@@ -29,6 +29,7 @@ Examples include:
 - script or HTML injection through transcript, metadata, service errors, or model output;
 - access to browsing data outside the documented YouTube scope;
 - unintended transmission of notes, transcripts, or credentials;
+- unsafe or unexpected content in generated Obsidian URIs or vocabulary Markdown;
 - a dependency or release-workflow compromise; and
 - bypasses of local data deletion or DeepSeek configuration controls.
 

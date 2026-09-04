@@ -6,6 +6,7 @@ Turn every YouTube video into a resource for deep learning. YouTube Digest bring
 
 - Turn captions into a readable, searchable learning resource.
 - Learn languages with the original transcript, a Simplified Chinese translation, or an aligned bilingual view.
+- Put the original line and Chinese translation at the bottom of the video for movie-style bilingual viewing.
 - Build understanding with an AI overview, chapters, key quotes, and selected-text explanations.
 - Navigate long videos by clicking timestamps in the transcript, overview, or notes.
 - Save polished timestamped notes for later study.
@@ -92,9 +93,28 @@ Keys and settings are stored in Chrome's local extension storage on your device.
 1. Open a standard YouTube watch page with captions.
 2. Click the YouTube Digest extension icon to open the side panel.
 3. Read the timestamped transcript, or choose **Original**, **中文**, or **双语**.
-4. Open **Overview** when you want AI-generated chapters and key quotes.
-5. Select transcript text when you want an AI explanation.
-6. Save a note from the player or a key quote, then revisit it from **Notes**.
+4. Choose **播放器双语** above the transcript to show the original line and Chinese translation at the bottom of the video. Choose it again to turn the overlay off. This switch does not change the selected right-side transcript mode.
+5. Open **Overview** when you want AI-generated chapters and key quotes.
+6. Select transcript text when you want an AI explanation.
+7. Save a note from the player or a key quote, then revisit it from **Notes**.
+
+The player overlay hides YouTube's native caption layer to avoid duplicate source lines and restores it when switched off. Because the overlay lives inside the player, it follows regular, theater, and full-screen viewing. It translates from the current playback position first and then fills the rest of the video progressively. The player and Full Transcript share the same base subtitle translations, local cache, and in-flight work, so requesting the same cue from both surfaces produces only one DeepSeek call. Player translations cached by v1.1.6 are migrated automatically.
+
+## Build a vocabulary notebook with Obsidian
+
+1. Select a word or short phrase in the transcript and choose **Add word**.
+2. Review the captured sentence and timestamp, optionally add a personal meaning, and keep **Generate dictionary details** enabled when you want DeepSeek to build a bilingual entry.
+3. Open **Words** to replay the source, copy Markdown, or export the full collection.
+4. In YouTube Digest Settings, enter your Obsidian vault name or vault ID and choose a folder such as `YouTube Digest/Vocabulary`.
+5. Choose **Send to Obsidian** on a word. Obsidian creates or updates `word.md`, with Properties for learning status, first-added date, updated date, context count, and video count.
+
+The generated note has two sections. **Dictionary** contains the lemma, pronunciation, multiple useful senses, bilingual definitions, and examples for each sense. **Video contexts** lists every collected video sentence with its complete Chinese translation, contextual meaning, optional language note, and timestamped source. Older saved words can be completed later with **Generate details**.
+
+Only one entry is kept for each normalized word. Repeating the same word at the same video timestamp does not create a duplicate. Finding it in another video or at another position appends a context. When dictionary details already exist, DeepSeek analyzes only the new sentence instead of regenerating senses and general examples. Historical duplicate entries are merged automatically when the collection is read, without dropping their video contexts.
+
+This integration uses the official `obsidian://` URI. To keep detailed multi-sense notes reliable and avoid an excessively long URI, **Send to Obsidian** briefly copies the generated Markdown to the clipboard and asks Obsidian to use that clipboard content. It does not require an Obsidian community plugin or another API key. Each normalized word uses one stable note name, such as `serendipity.md`, so sending it again updates the same file. Obsidian Bases or Dataview can filter, group, and count vocabulary by status, date, context count, or video count. Chrome may ask for permission to open Obsidian the first time.
+
+Older Obsidian notes named with the previous “word - date - identifier” pattern are not deleted automatically by the URI. After confirming that the new `word.md` contains every context, archive or remove the older files manually in Obsidian.
 
 ## What works today
 
@@ -102,6 +122,7 @@ Keys and settings are stored in Chrome's local extension storage on your device.
 - Standard `youtube.com/watch` video pages.
 - Native subtitle tracks returned by Supadata. YouTube Digest prefers English when available, but may show another native language.
 - Original, Simplified Chinese, and aligned bilingual transcript views.
+- A separately controlled movie-style bilingual overlay inside the video player, without removing side-panel features.
 - AI overviews, selected-text explanations, translation, and automatic note polishing.
 - Local notes and a local cache for recent transcript and digest results.
 - DeepSeek V4 Flash for all published AI features. Other providers require a local code adaptation and are not supported by this published version.
@@ -138,7 +159,7 @@ A measured 20-minute English talk contained **2,935 spoken English words** and 1
 
 If all input is billed as cache miss, input costs about $0.0046 and output costs about $0.0010 to $0.0013, for a total of about $0.0056 to $0.0059. When much of the repeated system prompt hits DeepSeek's automatic best-effort cache, a realistic lower end is about $0.002 to $0.003. A practical estimate for fully translating this talk is therefore **$0.002 to $0.006 USD, about ¥0.02 to ¥0.04**.
 
-Translation is lazy and progressive. Cached segments are reused, and only rows you request by scrolling into them incur calls. Retries, provider behavior, and pricing changes can increase the final cost.
+Side-panel translation is lazy and progressive, so only rows you approach by scrolling incur calls. Enabling **播放器双语** progressively translates the complete video from the current playback position so viewing can continue without gaps. Both surfaces share one base-cue cache and any translation already in flight, so enabling them together does not duplicate a request for the same cue. Retries, provider behavior, and pricing changes can still increase the final cost.
 
 ## Remix it with your coding agent
 
@@ -165,7 +186,9 @@ YouTube Digest makes provider requests directly from the extension:
 1. It sends a canonical YouTube watch URL to Supadata to request the native transcript.
 2. It sends the transcript and relevant video metadata to DeepSeek when you request AI features.
 3. Focused features send only the content they need, such as selected text with context or small transcript batches for translation.
-4. It stores keys, settings, notes, and recent cache entries locally in Chrome.
+4. The first vocabulary generation sends the selected word, its sentence context, and the video title to DeepSeek to create bilingual dictionary senses, examples, and sentence analysis. When that word already has a dictionary, only the new sentence and video title are sent for contextual analysis.
+5. It stores keys, settings, notes, and recent cache entries locally in Chrome.
+6. It stores vocabulary locally in Chrome. A word is sent to Obsidian only when you choose **Send to Obsidian**, using an `obsidian://` URI generated on the device.
 
 There is no YouTube Digest account system, advertising, analytics, or telemetry. Supadata and DeepSeek still receive data under their own terms and privacy policies. See [PRIVACY.md](PRIVACY.md) for details.
 

@@ -30,6 +30,17 @@ let ytdDigestButton = null;
 let digestButtonObserver = null;
 let digestButtonReconcileTimer = null;
 let digestButtonResizeListenerAdded = false;
+let playerSubtitleEnabled = false;
+let playerSubtitleVideoId = null;
+let playerSubtitleSegments = [];
+let playerSubtitleHost = null;
+let playerSubtitleWrapper = null;
+let playerSubtitleOriginalLine = null;
+let playerSubtitleTranslationLine = null;
+let playerSubtitleVideo = null;
+let playerSubtitlePlayer = null;
+let playerSubtitleTimeHandler = null;
+let playerSubtitleActiveIndex = -1;
 
 // ============================================================
 // INITIALIZATION
@@ -160,6 +171,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Show brief feedback that note was saved
     showNoteSavedToast(message.note);
     sendResponse({ success: true });
+    return false;
+  }
+
+  if (message.action === "configurePlayerSubtitles") {
+    const result = configurePlayerSubtitles(message);
+    sendResponse(result);
+    return false;
+  }
+
+  if (message.action === "updatePlayerSubtitleTranslations") {
+    const result = updatePlayerSubtitleTranslations(message);
+    sendResponse(result);
     return false;
   }
 
@@ -791,6 +814,307 @@ function escapeHtmlForContent(text) {
 }
 
 // ============================================================
+// IN-PLAYER BILINGUAL SUBTITLES
+// ============================================================
+
+function normalizePlayerSubtitleText(value) {
+  return String(value || "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/?[a-z][^>]*>/gi, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .trim();
+}
+
+function normalizePlayerSubtitleSegments(rawSegments) {
+  if (!Array.isArray(rawSegments)) return [];
+  const seen = new Set();
+  const normalized = [];
+
+  rawSegments.forEach((segment, sourceIndex) => {
+    const id = typeof segment?.id === "string" ? segment.id.trim() : "";
+    const start = Number(segment?.start);
+    const text = normalizePlayerSubtitleText(segment?.text);
+    if (!id || seen.has(id) || !Number.isFinite(start) || start < 0 || !text) {
+      return;
+    }
+    seen.add(id);
+    normalized.push({
+      id,
+      start,
+      requestedEnd: Number(segment?.end),
+      text,
+      translation: normalizePlayerSubtitleText(segment?.translation),
+      error: "",
+      sourceIndex,
+    });
+  });
+
+  normalized.sort((a, b) => a.start - b.start || a.sourceIndex - b.sourceIndex);
+  return normalized.map((segment, index) => {
+    const nextStart = Number(normalized[index + 1]?.start);
+    const fallbackEnd = Number.isFinite(nextStart) ? nextStart : segment.start + 8;
+    const end =
+      Number.isFinite(segment.requestedEnd) && segment.requestedEnd > segment.start
+        ? segment.requestedEnd
+        : fallbackEnd;
+    return {
+      id: segment.id,
+      start: segment.start,
+      end: Math.max(segment.start + 0.25, end),
+      text: segment.text,
+      translation: segment.translation,
+      error: "",
+    };
+  });
+}
+
+function findActivePlayerSubtitleIndex(segments, currentTime) {
+  if (!Array.isArray(segments) || !segments.length) return -1;
+  const time = Number(currentTime);
+  if (!Number.isFinite(time)) return -1;
+
+  let low = 0;
+  let high = segments.length - 1;
+  let candidate = -1;
+  while (low <= high) {
+    const middle = Math.floor((low + high) / 2);
+    if (segments[middle].start <= time) {
+      candidate = middle;
+      low = middle + 1;
+    } else {
+      high = middle - 1;
+    }
+  }
+  if (candidate < 0 || time >= segments[candidate].end) return -1;
+  return candidate;
+}
+
+function ensurePlayerSubtitleNativeStyle() {
+  if (document.getElementById("ytd-player-subtitles-native-style")) return;
+  const style = document.createElement("style");
+  style.id = "ytd-player-subtitles-native-style";
+  style.textContent = `
+    #movie_player.ytd-player-subtitles-active .ytp-caption-window-container {
+      display: none !important;
+    }
+  `;
+  (document.head || document.documentElement).appendChild(style);
+}
+
+function removePlayerSubtitleDom() {
+  if (playerSubtitleVideo && playerSubtitleTimeHandler) {
+    ["timeupdate", "seeked", "loadedmetadata", "play"].forEach((eventName) => {
+      playerSubtitleVideo.removeEventListener(eventName, playerSubtitleTimeHandler);
+    });
+  }
+  playerSubtitlePlayer?.classList.remove("ytd-player-subtitles-active");
+  playerSubtitleHost?.remove();
+  playerSubtitleHost = null;
+  playerSubtitleWrapper = null;
+  playerSubtitleOriginalLine = null;
+  playerSubtitleTranslationLine = null;
+  playerSubtitleVideo = null;
+  playerSubtitlePlayer = null;
+  playerSubtitleTimeHandler = null;
+  playerSubtitleActiveIndex = -1;
+}
+
+function destroyPlayerSubtitles() {
+  removePlayerSubtitleDom();
+  playerSubtitleEnabled = false;
+  playerSubtitleVideoId = null;
+  playerSubtitleSegments = [];
+}
+
+function createPlayerSubtitleOverlay() {
+  removePlayerSubtitleDom();
+  const player = document.querySelector(
+    "#movie_player.html5-video-player, #movie_player, .html5-video-player",
+  );
+  const video = player?.querySelector("video.html5-main-video") ||
+    document.querySelector("video.html5-main-video");
+  if (!player || !video || typeof document.createElement("div").attachShadow !== "function") {
+    return false;
+  }
+
+  ensurePlayerSubtitleNativeStyle();
+  const host = document.createElement("div");
+  host.id = "ytd-bilingual-subtitle-overlay";
+  host.setAttribute("aria-live", "off");
+  host.style.cssText =
+    "position:absolute;inset:0;display:block;pointer-events:none;z-index:60;overflow:hidden;";
+  const shadow = host.attachShadow({ mode: "closed" });
+  const style = document.createElement("style");
+  style.textContent = `
+    :host { color: #fff; font-family: Roboto, Arial, sans-serif; }
+    .subtitle-wrap {
+      position: absolute;
+      left: 5%;
+      right: 5%;
+      bottom: clamp(62px, 11%, 126px);
+      display: flex;
+      justify-content: center;
+      text-align: center;
+      opacity: 1;
+      transition: opacity 100ms ease;
+    }
+    .subtitle-wrap[hidden] { display: none; }
+    .subtitle-cue {
+      display: inline-flex;
+      max-width: min(92%, 1200px);
+      flex-direction: column;
+      gap: 4px;
+      padding: 7px 14px 9px;
+      border-radius: 7px;
+      background: rgba(0, 0, 0, 0.72);
+      box-shadow: 0 2px 14px rgba(0, 0, 0, 0.38);
+      text-shadow: 0 1px 3px #000, 0 0 2px #000;
+      overflow-wrap: anywhere;
+    }
+    .subtitle-original {
+      font-size: clamp(17px, 2.05vw, 30px);
+      font-weight: 500;
+      line-height: 1.24;
+      white-space: pre-line;
+    }
+    .subtitle-translation {
+      color: #ffe38a;
+      font-size: clamp(16px, 1.9vw, 28px);
+      font-weight: 600;
+      line-height: 1.28;
+      white-space: pre-line;
+    }
+    .subtitle-translation.pending { color: rgba(255, 255, 255, 0.72); font-weight: 400; }
+    .subtitle-translation.error { color: #ffc5c5; font-weight: 400; }
+    @media (max-width: 700px) {
+      .subtitle-wrap { left: 2%; right: 2%; bottom: 54px; }
+      .subtitle-cue { max-width: 96%; gap: 2px; padding: 5px 9px 6px; }
+      .subtitle-original { font-size: clamp(14px, 4vw, 20px); }
+      .subtitle-translation { font-size: clamp(13px, 3.7vw, 19px); }
+    }
+  `;
+  const wrapper = document.createElement("div");
+  wrapper.className = "subtitle-wrap";
+  wrapper.hidden = true;
+  const cue = document.createElement("div");
+  cue.className = "subtitle-cue";
+  const original = document.createElement("div");
+  original.className = "subtitle-original";
+  const translation = document.createElement("div");
+  translation.className = "subtitle-translation pending";
+  cue.appendChild(original);
+  cue.appendChild(translation);
+  wrapper.appendChild(cue);
+  shadow.appendChild(style);
+  shadow.appendChild(wrapper);
+  player.appendChild(host);
+  player.classList.add("ytd-player-subtitles-active");
+
+  playerSubtitleHost = host;
+  playerSubtitleWrapper = wrapper;
+  playerSubtitleOriginalLine = original;
+  playerSubtitleTranslationLine = translation;
+  playerSubtitleVideo = video;
+  playerSubtitlePlayer = player;
+  playerSubtitleTimeHandler = renderActivePlayerSubtitle;
+  ["timeupdate", "seeked", "loadedmetadata", "play"].forEach((eventName) => {
+    video.addEventListener(eventName, playerSubtitleTimeHandler);
+  });
+  return true;
+}
+
+function renderActivePlayerSubtitle() {
+  if (
+    !playerSubtitleEnabled ||
+    !playerSubtitleWrapper ||
+    !playerSubtitleVideo ||
+    playerSubtitlePlayer?.classList.contains("ad-showing")
+  ) {
+    if (playerSubtitleWrapper) playerSubtitleWrapper.hidden = true;
+    return;
+  }
+
+  const index = findActivePlayerSubtitleIndex(
+    playerSubtitleSegments,
+    playerSubtitleVideo.currentTime,
+  );
+  if (index < 0) {
+    playerSubtitleActiveIndex = -1;
+    playerSubtitleWrapper.hidden = true;
+    return;
+  }
+
+  const segment = playerSubtitleSegments[index];
+  playerSubtitleActiveIndex = index;
+  playerSubtitleOriginalLine.textContent = segment.text;
+  playerSubtitleTranslationLine.textContent = segment.translation
+    ? segment.translation
+    : segment.error
+      ? "中文翻译暂不可用"
+      : "正在生成中文…";
+  playerSubtitleTranslationLine.className = `subtitle-translation ${
+    segment.translation ? "" : segment.error ? "error" : "pending"
+  }`.trim();
+  playerSubtitleWrapper.hidden = false;
+}
+
+function configurePlayerSubtitles(message) {
+  if (!message?.enabled) {
+    destroyPlayerSubtitles();
+    return { success: true, enabled: false };
+  }
+
+  playerSubtitleSegments = normalizePlayerSubtitleSegments(message.segments);
+  playerSubtitleEnabled = true;
+  playerSubtitleVideoId = String(message.videoId || "");
+  if (!playerSubtitleSegments.length) {
+    destroyPlayerSubtitles();
+    return { success: false, error: "No valid subtitle segments." };
+  }
+  if (!createPlayerSubtitleOverlay()) {
+    destroyPlayerSubtitles();
+    return { success: false, error: "YouTube player is not ready." };
+  }
+  renderActivePlayerSubtitle();
+  return { success: true, enabled: true, count: playerSubtitleSegments.length };
+}
+
+function updatePlayerSubtitleTranslations(message) {
+  if (
+    !playerSubtitleEnabled ||
+    String(message?.videoId || "") !== playerSubtitleVideoId ||
+    !Array.isArray(message?.segments)
+  ) {
+    return { success: false, error: "Subtitle session is no longer active." };
+  }
+
+  const updates = new Map();
+  message.segments.forEach((item) => {
+    if (!item || typeof item.id !== "string") return;
+    updates.set(item.id, {
+      translation: normalizePlayerSubtitleText(item.text),
+      error: normalizePlayerSubtitleText(item.error),
+    });
+  });
+  playerSubtitleSegments.forEach((segment) => {
+    const update = updates.get(segment.id);
+    if (!update) return;
+    segment.translation = update.translation;
+    segment.error = update.error;
+  });
+  renderActivePlayerSubtitle();
+  return { success: true, updated: updates.size };
+}
+
+// Pure helpers are exposed only for repository tests.
+globalThis.__YTD_PLAYER_SUBTITLE_TESTING__ = {
+  normalizePlayerSubtitleText,
+  normalizePlayerSubtitleSegments,
+  findActivePlayerSubtitleIndex,
+};
+
+// ============================================================
 // PAGE NAVIGATION DETECTION
 // ============================================================
 
@@ -805,6 +1129,9 @@ function escapeHtmlForContent(text) {
  * we clean up old markers and re-inject the button.
  */
 document.addEventListener("yt-navigate-finish", () => {
+  // The previous video's timings must never leak onto the next SPA route.
+  destroyPlayerSubtitles();
+
   // Clean up old key moment markers when navigating to a new video
   const existingMarkers = document.querySelectorAll(".ytd-key-moment-markers");
   existingMarkers.forEach((m) => m.remove());

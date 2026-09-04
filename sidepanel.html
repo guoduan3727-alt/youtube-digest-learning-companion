@@ -33,6 +33,7 @@
         <button class="tab active" data-tab="transcript">Transcript</button>
         <button class="tab" data-tab="overview">Overview</button>
         <button class="tab" data-tab="notes">Notes</button>
+        <button class="tab" data-tab="vocabulary">Words</button>
       </div>
     </div>
 
@@ -113,6 +114,13 @@
                 </div>
               </div>
               <div class="transcript-actions">
+                <button
+                  class="enhance-btn player-subtitles-btn"
+                  id="playerSubtitlesBtn"
+                  type="button"
+                  aria-pressed="false"
+                  title="在 YouTube 播放器底部显示双语字幕"
+                >播放器双语</button>
                 <button class="enhance-btn" id="copyTranscriptBtn">Copy</button>
                 <button class="enhance-btn" id="exportTranscriptBtn">
                   Export
@@ -192,6 +200,35 @@
             <div id="notesList"></div>
           </div>
         </div>
+
+        <!-- TAB: Vocabulary -->
+        <div class="tab-panel" data-panel="vocabulary">
+          <div class="section">
+            <div class="section-header vocabulary-header">
+              <div>
+                <div class="section-title">Vocabulary</div>
+                <div class="vocabulary-stats" id="vocabularyStats"></div>
+              </div>
+              <div class="vocabulary-actions">
+                <button class="enhance-btn" id="exportVocabularyBtn">
+                  Export Markdown
+                </button>
+              </div>
+            </div>
+            <p class="notes-intro" id="vocabularyIntro">
+              Select a word or short phrase in the transcript, then choose
+              “Add word”. Saved entries can be sent to Obsidian as individual
+              Markdown notes.
+            </p>
+            <div
+              class="vocabulary-status"
+              id="vocabularyStatus"
+              role="status"
+              aria-live="polite"
+            ></div>
+            <div id="vocabularyList"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -205,6 +242,7 @@
     </button>
 
     <script src="settings.js"></script>
+    <script src="vocabulary.js"></script>
     <script src="sidepanel.js"></script>
   </body>
 </html>

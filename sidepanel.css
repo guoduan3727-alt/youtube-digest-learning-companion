@@ -436,9 +436,29 @@ body {
 
 .transcript-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
   position: relative;
+}
+
+.player-subtitles-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.player-subtitles-btn.is-translating::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -1px;
+  animation: translationSpin 0.75s linear infinite;
 }
 
 /* ============================================================
@@ -1039,9 +1059,16 @@ body {
   z-index: 1000;
   transform: translateX(-50%);
   animation: fadeIn 0.15s ease;
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
 }
 
-.explain-btn {
+.explain-btn,
+.add-word-btn {
   font-family: var(--font-body);
   font-weight: 600;
   font-size: 11.5px;
@@ -1056,9 +1083,20 @@ body {
   transition: all 0.18s ease;
 }
 
-.explain-btn:hover {
+.explain-btn:hover,
+.add-word-btn:hover {
   background: var(--accent-hover);
   transform: scale(1.05);
+}
+
+.add-word-btn {
+  background: var(--sage);
+  box-shadow: 0 6px 16px rgba(124, 139, 111, 0.35);
+  white-space: nowrap;
+}
+
+.add-word-btn:hover {
+  background: #68785d;
 }
 
 .explain-modal-overlay {
@@ -1166,6 +1204,96 @@ body {
   padding: 16px;
   border-radius: var(--r-sm);
   background: var(--accent-dim);
+}
+
+.vocabulary-modal {
+  max-width: 440px;
+}
+
+.vocabulary-form-content {
+  display: grid;
+  gap: 7px;
+  padding: 18px 20px;
+  overflow-y: auto;
+}
+
+.vocabulary-form-content label {
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vocabulary-form-content label span {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.vocabulary-form-content input,
+.vocabulary-form-content textarea {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid var(--border-heavy);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: 13px/1.5 var(--font-body);
+  resize: vertical;
+}
+
+.vocabulary-form-content input:focus,
+.vocabulary-form-content textarea:focus {
+  border-color: var(--accent);
+  outline: 3px solid var(--accent-dim);
+}
+
+.vocabulary-enrich-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 8px 0 2px;
+  padding: 10px 11px;
+  border-radius: var(--r-sm);
+  background: var(--sage-dim);
+  cursor: pointer;
+}
+
+.vocabulary-enrich-option input {
+  width: auto;
+  margin-top: 3px;
+  accent-color: var(--sage);
+}
+
+.vocabulary-enrich-option span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.vocabulary-source-preview,
+.vocabulary-form-status,
+.vocabulary-status,
+.vocabulary-stats {
+  color: var(--text-muted);
+  font-size: 11.5px;
+}
+
+.vocabulary-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.vocabulary-form-actions .explain-btn {
+  box-shadow: none;
+}
+
+.vocabulary-form-actions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 /* ============================================================
@@ -1319,4 +1447,167 @@ body {
   border-color: var(--accent);
   color: var(--accent);
   background: var(--accent-dim);
+}
+
+/* ============================================================
+   VOCABULARY TAB
+   ============================================================ */
+.vocabulary-header {
+  align-items: flex-start;
+}
+
+.vocabulary-stats {
+  margin-top: 2px;
+}
+
+.vocabulary-status {
+  min-height: 18px;
+  margin: 0 0 10px;
+  color: var(--accent-hover);
+}
+
+.inline-settings-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-hover);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.vocabulary-item {
+  margin-bottom: 11px;
+  padding: 15px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.vocabulary-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.vocabulary-word {
+  color: var(--accent);
+  font: 700 18px/1.25 var(--font-display);
+}
+
+.vocabulary-meta {
+  max-width: 280px;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vocabulary-meaning {
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.vocabulary-context {
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font: 13px/1.6 var(--font-reading);
+}
+
+.vocabulary-context-translation,
+.vocabulary-context-meaning {
+  margin: -5px 0 11px;
+  padding-left: 11px;
+  border-left: 2px solid var(--sage);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.vocabulary-context-meaning {
+  color: var(--text);
+}
+
+.vocabulary-dictionary-preview {
+  margin: 10px 0 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface-raised);
+}
+
+.vocabulary-dictionary-preview summary {
+  padding: 9px 11px;
+  color: var(--sage);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vocabulary-dictionary-body {
+  padding: 0 11px 10px;
+}
+
+.vocabulary-sense {
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.vocabulary-sense-title {
+  margin-bottom: 3px;
+  color: var(--text);
+  font-weight: 750;
+}
+
+.vocabulary-sense-zh {
+  margin-top: 2px;
+  color: var(--text);
+}
+
+.vocabulary-example {
+  margin-top: 7px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border-heavy);
+  font-style: italic;
+}
+
+.vocabulary-example span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+.vocabulary-enrichment-missing,
+.vocabulary-enrichment-error {
+  margin: 8px 0 12px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--sage-dim);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+.vocabulary-enrichment-error {
+  background: var(--accent-dim);
+  color: var(--accent-hover);
+}
+
+.vocabulary-item-actions {
+  flex-wrap: wrap;
+}
+
+.vocabulary-obsidian {
+  border-color: rgba(124, 139, 111, 0.5);
+  color: var(--sage);
 }

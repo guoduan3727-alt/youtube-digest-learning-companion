@@ -257,6 +257,55 @@ test("structured translation batches align by stable ID and expose missing fallb
   assert.equal(aligned[1].text, "\u7b2c\u4e8c\u4e2a\u5b8c\u6574\u53e5\u5b50\u3002");
 });
 
+test("player and Full Transcript share one in-flight translation and cache", async () => {
+  let apiCalls = 0;
+  let finishRequest;
+  const helpers = loadSidepanelHelpers({
+    sendMessage(message) {
+      assert.equal(message.action, "translateContent");
+      apiCalls += 1;
+      return new Promise((resolve) => {
+        finishRequest = resolve;
+      });
+    },
+  });
+  const source = [
+    { id: "segment-0-0", text: "The first shared cue." },
+    { id: "segment-1-3000", text: "The second shared cue." },
+  ];
+
+  const playerRequest = helpers.requestSharedTranslationBatch(source, "video-1");
+  const transcriptRequest = helpers.requestSharedTranslationBatch(
+    [source[1]],
+    "video-1",
+  );
+  assert.equal(apiCalls, 1, "overlapping consumers must share one API request");
+
+  finishRequest({
+    success: true,
+    translatedContent: {
+      segments: [
+        { id: source[0].id, text: "第一条共享字幕。" },
+        { id: source[1].id, text: "第二条共享字幕。" },
+      ],
+    },
+  });
+  const [playerResult, transcriptResult] = await Promise.all([
+    playerRequest,
+    transcriptRequest,
+  ]);
+  assert.equal(playerResult[1].text, "第二条共享字幕。");
+  assert.equal(transcriptResult[0].text, "第二条共享字幕。");
+
+  const cached = await helpers.requestSharedTranslationBatch(source, "video-1");
+  assert.equal(apiCalls, 1, "cached shared cues must not call the API again");
+  assert.equal(cached[0].text, "第一条共享字幕。");
+  assert.equal(
+    helpers.sharedTranslationCacheKey(source[0], "video-1"),
+    "video-1:zh:shared:segment-0-0",
+  );
+});
+
 test("translated-only omits English while bilingual renders aligned English and Chinese", () => {
   const { renderTranscriptSegmentContent } = loadSidepanelHelpers();
   const segment = { id: "segment-0-0", text: "Original English sentence." };
@@ -358,7 +407,7 @@ test("all AI product requests use DeepSeek non-thinking and JSON behavior", asyn
   const backgroundSource = read("background.js");
   assert.equal(
     (backgroundSource.match(/await requestAiCompletion\(\{/g) || []).length,
-    4,
+    6,
   );
   assert.doesNotMatch(backgroundSource, /disableThinking/);
   for (const callPath of [
@@ -366,6 +415,8 @@ test("all AI product requests use DeepSeek non-thinking and JSON behavior", asyn
     "cleanupNoteText",
     "handleExplainSelection",
     "callAiTranslation",
+    "handleEnrichVocabulary",
+    "handleAnalyzeVocabularyContext",
   ]) {
     assert.match(
       backgroundSource,

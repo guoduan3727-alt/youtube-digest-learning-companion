@@ -17,7 +17,7 @@ test("manifest uses minimized install-time permissions", () => {
   assert.ok(!manifest.permissions.includes("activeTab"));
   assert.ok(manifest.host_permissions.includes("https://api.deepseek.com/*"));
   assert.equal(Object.hasOwn(manifest, "optional_host_permissions"), false);
-  assert.equal(manifest.version, "1.1.5");
+  assert.equal(manifest.version, "1.1.7");
 });
 
 test("release copy documents current scope without em dashes", () => {
@@ -145,6 +145,9 @@ test("release copy documents current scope without em dashes", () => {
   assert.doesNotMatch(optionsPage, /~\/Documents\/youtube-digest/);
   assert.doesNotMatch(optionsPage, /%USERPROFILE%\\Documents\\youtube-digest/);
   assert.match(optionsPage, /id="copyCustomizationPromptBtn"/);
+  assert.match(optionsPage, /id="obsidianVault"/);
+  assert.match(optionsPage, /id="obsidianFolder"/);
+  assert.match(optionsPage, /id="clearVocabularyBtn"/);
   assert.match(optionsStyles, /\.customization-summary:hover\s*\{/);
   assert.match(optionsStyles, /\.customization-summary:focus-visible\s*\{/);
   assert.match(optionsStyles, /\.data-card\s*\{[^}]*margin-top:\s*36px;/);
@@ -181,6 +184,16 @@ test("release copy documents current scope without em dashes", () => {
   assert.doesNotMatch(publishedDocs, /configure a different OpenAI-compatible/i);
   assert.match(readme, /published version supports DeepSeek V4 Flash as its only AI provider/i);
   assert.match(chineseReadme, /发布版本只支持 DeepSeek V4 Flash/);
+  assert.match(readme, /^## Build a vocabulary notebook with Obsidian$/m);
+  assert.match(chineseReadme, /^## 使用 Obsidian 建立单词本$/m);
+  assert.match(read("sidepanel.html"), /data-tab="vocabulary"/);
+  assert.match(read("sidepanel.html"), /id="exportVocabularyBtn"/);
+  assert.match(read("background.js"), /action === "saveVocabulary"/);
+  assert.match(read("background.js"), /action === "markVocabularySynced"/);
+  assert.match(read("background.js"), /action === "enrichVocabulary"/);
+  assert.match(read("background.js"), /"vocabulary\.md"/);
+  assert.match(read("PRIVACY.md"), /obsidian:\/\/new/);
+  assert.match(read("sidepanel.js"), /Generate dictionary meanings/);
 });
 
 test("notes filters preserve selected contrast and expose pressed state", () => {
@@ -249,6 +262,7 @@ test("published prompt files contain runtime sections", () => {
       "Chinese rules",
       "Transcript batch translation",
     ],
+    "prompts/vocabulary.md": ["System prompt", "User prompt"],
   };
 
   for (const [file, sections] of Object.entries(expectedSections)) {

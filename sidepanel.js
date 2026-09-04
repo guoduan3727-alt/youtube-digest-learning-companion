@@ -40,6 +40,23 @@ let transcriptScrollObserver = null;
 let transcriptParagraphCache = new Map();
 const TRANSLATION_MESSAGE_TIMEOUT_MS = 130_000;
 
+// --- In-player bilingual subtitle state ---
+// This stays independent from currentTranscriptMode: the right-side transcript
+// keeps its current view while the player overlay is controlled separately.
+const PLAYER_SUBTITLES_SETTING_KEY = "ytd_player_subtitles_enabled";
+const SHARED_TRANSLATION_SEGMENT_LIMITS = Object.freeze({
+  minChars: 28,
+  idealChars: 72,
+  maxChars: 130,
+  maxSeconds: 7,
+});
+let playerSubtitlesEnabled = false;
+let playerSubtitleGeneration = 0;
+// Both the side-panel bilingual view and the in-player overlay use these same
+// cue translations. In-flight promises prevent two consumers from sending the
+// same cue to DeepSeek at the same time.
+const sharedTranslationInFlight = new Map();
+
 /**
  * Prevent a stopped service worker or dead message channel from leaving the
  * transcript queue stuck forever. The underlying Chrome message cannot be
@@ -231,6 +248,7 @@ function groupTranscriptEntries(entries, limits = TRANSCRIPT_SEGMENT_LIMITS) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   setupEventListeners();
+  await loadPlayerSubtitlesSetting();
   await evictOldCacheEntries(20);
 
   const configStatus = await chrome.runtime.sendMessage({
@@ -266,6 +284,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .getElementById("notesFilterAll")
       ?.classList.contains("active");
     loadNotes(filterAll ? null : currentVideoId);
+    sendResponse({ success: true });
+  }
+  if (message.action === "vocabularySaved") {
+    if (
+      document
+        .querySelector('.tab[data-tab="vocabulary"]')
+        ?.classList.contains("active")
+    ) {
+      loadVocabulary();
+    }
     sendResponse({ success: true });
   }
   return false;
@@ -378,6 +406,9 @@ function setupEventListeners() {
   document
     .getElementById("exportTranscriptBtn")
     ?.addEventListener("click", exportTranscript);
+  document
+    .getElementById("playerSubtitlesBtn")
+    ?.addEventListener("click", togglePlayerSubtitles);
   document.querySelectorAll(".transcript-mode-btn").forEach((button) => {
     button.addEventListener("click", () => {
       handleTranscriptModeChange(button.dataset.transcriptMode);
@@ -408,6 +439,10 @@ function setupEventListeners() {
     setNotesFilter(true);
     loadNotes(null); // Load all notes
   });
+
+  document
+    .getElementById("exportVocabularyBtn")
+    ?.addEventListener("click", exportVocabularyMarkdown);
 }
 
 function setNotesFilter(showAll) {
@@ -531,12 +566,14 @@ async function startDigest(videoId, videoUrl) {
   // Check if we already have this video loaded in memory
   if (videoId === currentVideoId && currentAnalysis) {
     showState("results");
+    if (playerSubtitlesEnabled) syncPlayerSubtitleOverlay();
     return;
   }
 
   // Every video change invalidates observer work and in-flight translations.
   if (videoId !== currentVideoId) {
     translationGeneration += 1;
+    playerSubtitleGeneration += 1;
     if (transcriptScrollObserver) transcriptScrollObserver.disconnect();
     transcriptScrollObserver = null;
   }
@@ -586,6 +623,7 @@ async function startDigest(videoId, videoUrl) {
     // Setup explain feature
     setupExplainFeature();
     if (currentTranscriptMode !== "original") translateTranscript();
+    if (playerSubtitlesEnabled) syncPlayerSubtitleOverlay();
     return;
   }
 
@@ -644,6 +682,7 @@ async function startDigest(videoId, videoUrl) {
   // Setup explain feature for text selection
   setupExplainFeature();
   if (currentTranscriptMode !== "original") translateTranscript();
+  if (playerSubtitlesEnabled) syncPlayerSubtitleOverlay();
 
   // Save transcript to cache (without analysis)
   await saveToCache(videoId);
@@ -976,6 +1015,10 @@ function switchTab(tabName) {
   if (tabName === "overview" && !currentAnalysis && !isAnalysisLoading) {
     triggerAnalysis();
   }
+
+  if (tabName === "vocabulary") {
+    loadVocabulary();
+  }
 }
 
 /**
@@ -1177,7 +1220,7 @@ function sanitizeFilename(str) {
 
 /**
  * Sets up text selection handling in the transcript.
- * When user selects text, shows an "Explain" button.
+ * When user selects text, shows Explain and Add word actions.
  */
 function setupExplainFeature() {
   const transcriptList = document.getElementById("transcriptList");
@@ -1187,15 +1230,20 @@ function setupExplainFeature() {
   const existingTooltip = document.getElementById("explainTooltip");
   if (existingTooltip) existingTooltip.remove();
 
-  // Create the explain tooltip/button
+  // Create the transcript selection actions.
   const tooltip = document.createElement("div");
   tooltip.id = "explainTooltip";
   tooltip.className = "explain-tooltip";
-  tooltip.innerHTML = `<button class="explain-btn">💡 Explain</button>`;
+  tooltip.innerHTML = `
+    <button class="explain-btn" type="button">💡 Explain</button>
+    <button class="add-word-btn" type="button">＋ Add word</button>
+  `;
   tooltip.style.display = "none";
   document.body.appendChild(tooltip);
 
   let selectedText = "";
+  let selectedContext = "";
+  let selectedSeconds = 0;
 
   // Interacting with Explain must preserve the transcript selection and stay
   // isolated from document/row click behavior.
@@ -1221,6 +1269,19 @@ function setupExplainFeature() {
     // Allow any selection length (removed 10+ char requirement)
     if (text.length > 0 && isInTranscript) {
       selectedText = text;
+      const anchorElement =
+        selection.anchorNode?.nodeType === Node.ELEMENT_NODE
+          ? selection.anchorNode
+          : selection.anchorNode?.parentElement;
+      const transcriptEntry = anchorElement?.closest?.(".transcript-entry");
+      const contextElement =
+        transcriptEntry?.querySelector(".transcript-original") ||
+        transcriptEntry?.querySelector(".transcript-text") ||
+        transcriptEntry?.querySelector(".transcript-copy");
+      selectedContext = (contextElement?.textContent || text)
+        .replace(/\s+/g, " ")
+        .trim();
+      selectedSeconds = Number(transcriptEntry?.dataset.seconds) || 0;
 
       // Position the tooltip near the selection
       const range = selection.getRangeAt(0);
@@ -1251,6 +1312,165 @@ function setupExplainFeature() {
 
       tooltip.style.display = "none";
       await showExplanation(selectedText);
+    });
+
+  tooltip
+    .querySelector(".add-word-btn")
+    .addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!selectedText) return;
+      tooltip.style.display = "none";
+      showAddWordModal({
+        word: selectedText,
+        context: selectedContext,
+        timestampSeconds: selectedSeconds,
+      });
+    });
+}
+
+function copyTextSynchronously(text) {
+  const textarea = document.createElement("textarea");
+  textarea.value = String(text || "");
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  textarea.style.pointerEvents = "none";
+  document.body.appendChild(textarea);
+  textarea.select();
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } catch (_error) {
+    copied = false;
+  }
+  textarea.remove();
+  return copied;
+}
+
+function showAddWordModal(selection) {
+  document.getElementById("addWordModal")?.remove();
+  const initialWord = YTD_VOCABULARY.normalizeWord(selection.word);
+  const modal = document.createElement("div");
+  modal.id = "addWordModal";
+  modal.className = "explain-modal-overlay";
+  modal.innerHTML = `
+    <form class="explain-modal vocabulary-modal" id="addWordForm">
+      <div class="explain-modal-header">
+        <div class="explain-modal-title">Add to vocabulary</div>
+        <button class="explain-modal-close" id="closeAddWord" type="button">✕</button>
+      </div>
+      <div class="vocabulary-form-content">
+        <label for="vocabularyWord">Word or phrase</label>
+        <input id="vocabularyWord" maxlength="120" required />
+        <label for="vocabularyMeaning">Meaning or translation <span>(optional)</span></label>
+        <textarea id="vocabularyMeaning" rows="3" maxlength="1000" placeholder="Add a meaning now, or complete it later in Obsidian"></textarea>
+        <label for="vocabularyContext">Sentence context</label>
+        <textarea id="vocabularyContext" rows="4" maxlength="3000">${escapeHtml(selection.context)}</textarea>
+        <label class="vocabulary-enrich-option">
+          <input id="vocabularyEnrich" type="checkbox" checked />
+          <span>Generate dictionary meanings, examples, and sentence analysis with DeepSeek</span>
+        </label>
+        <div class="vocabulary-source-preview">${escapeHtml(currentVideoTitle || "Untitled Video")} · ${escapeHtml(YTD_VOCABULARY.formatTimestamp(selection.timestampSeconds))}</div>
+        <div class="vocabulary-form-status" id="addWordStatus" role="status" aria-live="polite"></div>
+      </div>
+      <div class="vocabulary-form-actions">
+        <button class="note-action-btn" id="cancelAddWord" type="button">Cancel</button>
+        <button class="explain-btn" type="submit">Save word</button>
+      </div>
+    </form>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector("#vocabularyWord").value = initialWord;
+
+  const close = () => modal.remove();
+  modal.querySelector("#closeAddWord").addEventListener("click", close);
+  modal.querySelector("#cancelAddWord").addEventListener("click", close);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) close();
+  });
+  modal.querySelector("#vocabularyWord").focus();
+  modal
+    .querySelector("#addWordForm")
+    .addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const status = modal.querySelector("#addWordStatus");
+      const submitButton = modal.querySelector('button[type="submit"]');
+      status.textContent = "Saving…";
+      submitButton.disabled = true;
+      try {
+        const entry = {
+          word: modal.querySelector("#vocabularyWord").value,
+          meaning: modal.querySelector("#vocabularyMeaning").value,
+          context: modal.querySelector("#vocabularyContext").value,
+          videoId: currentVideoId,
+          videoTitle: currentVideoTitle,
+          channelName: currentChannelName,
+          timestampSeconds: selection.timestampSeconds,
+        };
+        const vocabularyResult = await chrome.runtime.sendMessage({
+          action: "getVocabulary",
+        });
+        const normalizedWord = YTD_VOCABULARY.normalizeWord(
+          entry.word,
+        ).toLocaleLowerCase("en-US");
+        const existingEntry = vocabularyResult?.success
+          ? vocabularyResult.entries.find(
+              (candidate) => candidate.normalizedWord === normalizedWord,
+            )
+          : null;
+        const occurrenceAlreadyExists = existingEntry?.occurrences?.some(
+          (occurrence) =>
+            YTD_VOCABULARY.occurrenceKey(occurrence) ===
+            YTD_VOCABULARY.occurrenceKey(entry),
+        );
+        if (
+          modal.querySelector("#vocabularyEnrich").checked &&
+          !occurrenceAlreadyExists
+        ) {
+          status.textContent = existingEntry?.dictionary
+            ? "Existing word found. Analyzing only this new sentence…"
+            : "Generating dictionary details…";
+          const enrichment = await chrome.runtime.sendMessage({
+            action:
+              existingEntry?.dictionary
+                ? "analyzeVocabularyContext"
+                : "enrichVocabulary",
+            entry,
+          });
+          if (enrichment?.success) {
+            if (!existingEntry?.dictionary) {
+              entry.dictionary = enrichment.dictionary;
+            }
+            entry.contextAnalysis = enrichment.contextAnalysis;
+          } else {
+            entry.enrichmentError =
+              enrichment?.error || "Dictionary details could not be generated.";
+            status.textContent = "AI details failed. Saving the word and context…";
+          }
+        }
+        const result = await chrome.runtime.sendMessage({
+          action: "saveVocabulary",
+          entry,
+        });
+        if (!result?.success) {
+          throw new Error(result?.error || "Could not save word.");
+        }
+        close();
+        switchTab("vocabulary");
+        await loadVocabulary();
+        const vocabularyStatus = document.getElementById("vocabularyStatus");
+        if (vocabularyStatus) {
+          vocabularyStatus.textContent = result.merged
+            ? result.occurrenceAdded
+              ? `Added a new video context to “${result.entry.word}”.`
+              : `“${result.entry.word}” and this video context were already saved.`
+            : `Saved “${result.entry.word}” as a new vocabulary word.`;
+        }
+      } catch (error) {
+        status.textContent = error.message || "Could not save word.";
+        submitButton.disabled = false;
+      }
     });
 }
 
@@ -1451,6 +1671,302 @@ async function loadFromCache(videoId) {
 async function updateCache() {
   if (currentVideoId) {
     await saveToCache(currentVideoId);
+  }
+}
+
+// ============================================================
+// VOCABULARY
+// ============================================================
+
+async function loadVocabulary() {
+  const status = document.getElementById("vocabularyStatus");
+  try {
+    const [result, stored] = await Promise.all([
+      chrome.runtime.sendMessage({ action: "getVocabulary" }),
+      chrome.storage.local.get(YTD_VOCABULARY.OBSIDIAN_SETTINGS_KEY),
+    ]);
+    if (!result?.success) {
+      throw new Error(result?.error || "Could not load vocabulary.");
+    }
+    renderVocabulary(
+      result.entries || [],
+      YTD_VOCABULARY.normalizeObsidianSettings(
+        stored[YTD_VOCABULARY.OBSIDIAN_SETTINGS_KEY],
+      ),
+    );
+    if (status) status.textContent = "";
+  } catch (error) {
+    if (status) {
+      status.textContent = error.message || "Could not load vocabulary.";
+    }
+  }
+}
+
+function renderVocabulary(entries, obsidianSettings) {
+  const list = document.getElementById("vocabularyList");
+  const intro = document.getElementById("vocabularyIntro");
+  const stats = document.getElementById("vocabularyStats");
+  if (!list) return;
+
+  list.innerHTML = "";
+  const uniqueCount = new Set(
+    entries.map((entry) =>
+      String(entry.normalizedWord || entry.word).toLocaleLowerCase("en-US"),
+    ),
+  ).size;
+  const occurrenceCount = entries.reduce(
+    (total, entry) =>
+      total + YTD_VOCABULARY.createEntry(entry).occurrences.length,
+    0,
+  );
+  const syncedCount = entries.filter((entry) => entry.obsidianSyncedAt).length;
+  if (stats) {
+    stats.textContent = `${uniqueCount} words · ${occurrenceCount} video contexts · ${syncedCount} sent to Obsidian`;
+  }
+
+  if (!entries.length) {
+    if (intro) intro.style.display = "block";
+    return;
+  }
+  if (intro) intro.style.display = "none";
+
+  entries.forEach((storedEntry) => {
+    const entry = YTD_VOCABULARY.createEntry(storedEntry);
+    const dictionary = entry.dictionary;
+    const analysis = entry.contextAnalysis;
+    const videoCount = new Set(
+      entry.occurrences
+        .map((occurrence) => occurrence.videoId)
+        .filter(Boolean),
+    ).size;
+    const contextsHtml = entry.occurrences.length
+      ? `
+        <details class="vocabulary-dictionary-preview vocabulary-contexts-preview">
+          <summary>Video contexts · ${entry.occurrences.length} ${entry.occurrences.length === 1 ? "sentence" : "sentences"} · ${videoCount} ${videoCount === 1 ? "video" : "videos"}</summary>
+          <div class="vocabulary-dictionary-body">
+            ${[...entry.occurrences]
+              .sort((a, b) => b.createdAt - a.createdAt)
+              .map(
+                (occurrence, index) => `
+                  <div class="vocabulary-sense vocabulary-saved-context">
+                    <div class="vocabulary-sense-title">${index + 1}. ${escapeHtml(occurrence.videoTitle)} · ${escapeHtml(occurrence.timestamp)}</div>
+                    <div>“${escapeHtml(occurrence.context || "No context saved.")}”</div>
+                    ${occurrence.contextAnalysis?.sentenceZh ? `<div class="vocabulary-sense-zh">${escapeHtml(occurrence.contextAnalysis.sentenceZh)}</div>` : ""}
+                  </div>
+                `,
+              )
+              .join("")}
+          </div>
+        </details>
+      `
+      : "";
+    const dictionaryHtml = dictionary
+      ? `
+        <details class="vocabulary-dictionary-preview">
+          <summary>Dictionary · ${dictionary.senses.length} ${dictionary.senses.length === 1 ? "sense" : "senses"}${dictionary.phonetic ? ` · ${escapeHtml(dictionary.phonetic)}` : ""}</summary>
+          <div class="vocabulary-dictionary-body">
+            ${dictionary.senses
+              .map(
+                (sense, index) => `
+                  <div class="vocabulary-sense">
+                    <div class="vocabulary-sense-title">${index + 1}. ${escapeHtml(sense.partOfSpeech || "Meaning")}</div>
+                    ${sense.definitionEn ? `<div>${escapeHtml(sense.definitionEn)}</div>` : ""}
+                    ${sense.definitionZh ? `<div class="vocabulary-sense-zh">${escapeHtml(sense.definitionZh)}</div>` : ""}
+                    ${sense.examples
+                      .map(
+                        (example) => `
+                          <div class="vocabulary-example">${escapeHtml(example.sentence)}${example.translationZh ? `<span>${escapeHtml(example.translationZh)}</span>` : ""}</div>
+                        `,
+                      )
+                      .join("")}
+                  </div>
+                `,
+              )
+              .join("")}
+          </div>
+        </details>
+      `
+      : `<div class="vocabulary-enrichment-missing">Dictionary details have not been generated yet.</div>`;
+    const item = document.createElement("article");
+    item.className = "vocabulary-item";
+    item.innerHTML = `
+      <div class="vocabulary-item-header">
+        <div>
+          <div class="vocabulary-word">${escapeHtml(entry.word)}</div>
+          <div class="vocabulary-meta">${entry.occurrences.length} contexts · ${videoCount} videos · latest: ${escapeHtml(entry.videoTitle)} · ${escapeHtml(entry.timestamp)}</div>
+        </div>
+        <button class="note-delete vocabulary-delete" type="button" title="Delete word and all video contexts">✕</button>
+      </div>
+      ${entry.meaning ? `<div class="vocabulary-meaning">${escapeHtml(entry.meaning)}</div>` : ""}
+      <div class="vocabulary-context">“${escapeHtml(entry.context || "No context saved.")}”</div>
+      ${analysis?.sentenceZh ? `<div class="vocabulary-context-translation">${escapeHtml(analysis.sentenceZh)}</div>` : ""}
+      ${analysis?.meaningInContextZh ? `<div class="vocabulary-context-meaning"><strong>In this sentence:</strong> ${escapeHtml(analysis.meaningInContextZh)}</div>` : ""}
+      ${contextsHtml}
+      ${dictionaryHtml}
+      ${entry.enrichmentError ? `<div class="vocabulary-enrichment-error">${escapeHtml(entry.enrichmentError)}</div>` : ""}
+      <div class="note-actions vocabulary-item-actions">
+        <button class="note-action-btn vocabulary-play" type="button">▶ Play</button>
+        <button class="note-action-btn vocabulary-copy" type="button">⧉ Copy Markdown</button>
+        <button class="note-action-btn vocabulary-enrich" type="button">${dictionary ? "↻ Refresh details" : "✨ Generate details"}</button>
+        <button class="note-action-btn vocabulary-obsidian" type="button">${entry.obsidianSyncedAt ? "↻ Send again" : "◆ Send to Obsidian"}</button>
+      </div>
+    `;
+
+    item
+      .querySelector(".vocabulary-delete")
+      .addEventListener("click", async () => {
+        await chrome.runtime.sendMessage({
+          action: "deleteVocabulary",
+          entryId: entry.id,
+        });
+        await loadVocabulary();
+      });
+    item.querySelector(".vocabulary-play").addEventListener("click", () => {
+      playVocabularyEntry(entry);
+    });
+    item
+      .querySelector(".vocabulary-copy")
+      .addEventListener("click", async (event) => {
+        const button = event.currentTarget;
+        const copied = await copyToClipboard(
+          YTD_VOCABULARY.buildMarkdown(entry),
+        );
+        button.textContent = copied ? "✓ Copied" : "Copy failed";
+        setTimeout(() => {
+          button.textContent = "⧉ Copy Markdown";
+        }, 1800);
+      });
+    item.querySelector(".vocabulary-obsidian").addEventListener("click", (event) => {
+      sendVocabularyToObsidian(
+        entry,
+        obsidianSettings,
+        event.currentTarget,
+      );
+    });
+    item
+      .querySelector(".vocabulary-enrich")
+      .addEventListener("click", async (event) => {
+        await enrichVocabularyEntry(entry, event.currentTarget);
+      });
+    list.appendChild(item);
+  });
+}
+
+async function enrichVocabularyEntry(entry, button) {
+  const status = document.getElementById("vocabularyStatus");
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = "Generating…";
+  if (status) status.textContent = `Generating dictionary details for “${entry.word}”…`;
+  try {
+    const enrichment = await chrome.runtime.sendMessage({
+      action: "enrichVocabulary",
+      entry,
+    });
+    if (!enrichment?.success) {
+      throw new Error(
+        enrichment?.error || "Could not generate dictionary details.",
+      );
+    }
+    const updated = await chrome.runtime.sendMessage({
+      action: "updateVocabularyEnrichment",
+      entryId: entry.id,
+      enrichment,
+    });
+    if (!updated?.success) {
+      throw new Error(updated?.error || "Could not update the saved word.");
+    }
+    await loadVocabulary();
+    if (status) status.textContent = "Dictionary details generated.";
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = originalLabel;
+    if (status) {
+      status.textContent = error.message || "Could not generate dictionary details.";
+    }
+  }
+}
+
+function playVocabularyEntry(entry) {
+  if (entry.videoId && entry.videoId === currentVideoId) {
+    seekTo(entry.timestampSeconds);
+  } else if (entry.timestampedUrl) {
+    chrome.tabs.create({ url: entry.timestampedUrl });
+  }
+}
+
+async function sendVocabularyToObsidian(entry, settings, button) {
+  const status = document.getElementById("vocabularyStatus");
+  try {
+    if (!settings.vault) {
+      if (status) {
+        status.innerHTML =
+          'Add your Obsidian vault name in <button class="inline-settings-link" type="button">Settings</button> first.';
+        status
+          .querySelector(".inline-settings-link")
+          ?.addEventListener("click", () =>
+            chrome.runtime.sendMessage({ action: "openOptions" }),
+          );
+      }
+      return;
+    }
+
+    const markdown = YTD_VOCABULARY.buildMarkdown(entry);
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(markdown);
+      copied = true;
+    } catch (_error) {
+      copied = copyTextSynchronously(markdown);
+    }
+    const uri = YTD_VOCABULARY.buildObsidianUri(entry, settings, {
+      useClipboard: copied,
+    });
+    button.disabled = true;
+    button.textContent = "Opening Obsidian…";
+
+    // A side panel is an extension page, so use the Tabs API to dispatch the
+    // custom protocol as a top-level navigation instead of navigating the
+    // embedded side-panel document.
+    await chrome.tabs.create({ url: uri, active: true });
+    await chrome.runtime.sendMessage({
+      action: "markVocabularySynced",
+      entryId: entry.id,
+    });
+    if (status) {
+      status.textContent = copied
+        ? "Sent to Obsidian. Allow Chrome to open Obsidian if prompted."
+        : "Sent using an inline note. Allow Chrome to open Obsidian if prompted.";
+    }
+    await loadVocabulary();
+  } catch (error) {
+    if (status) {
+      status.textContent = `Could not open Obsidian: ${error.message || "Chrome rejected the URI."}`;
+    }
+    button.disabled = false;
+    button.textContent = "◆ Send to Obsidian";
+  }
+}
+
+async function exportVocabularyMarkdown() {
+  const status = document.getElementById("vocabularyStatus");
+  try {
+    const result = await chrome.runtime.sendMessage({ action: "getVocabulary" });
+    if (!result?.success) {
+      throw new Error(result?.error || "Could not load vocabulary.");
+    }
+    if (!result.entries?.length) {
+      if (status) status.textContent = "Save at least one word before exporting.";
+      return;
+    }
+    const markdown = YTD_VOCABULARY.buildCollectionMarkdown(result.entries);
+    const date = new Date().toISOString().slice(0, 10);
+    downloadTextFile(markdown, `youtube-digest-vocabulary-${date}.md`);
+    if (status) status.textContent = "Vocabulary Markdown exported.";
+  } catch (error) {
+    if (status) {
+      status.textContent = error.message || "Could not export vocabulary.";
+    }
   }
 }
 
@@ -1737,6 +2253,351 @@ function onContentAreaScroll() {
 // TRANSCRIPT MODE UI — Original / Chinese / aligned bilingual
 // ============================================================
 
+function updatePlayerSubtitlesButton({ completed = 0, total = 0, error = "" } = {}) {
+  const button = document.getElementById("playerSubtitlesBtn");
+  if (!button) return;
+
+  const translating =
+    playerSubtitlesEnabled && total > 0 && completed >= 0 && completed < total;
+  button.classList.toggle("active", playerSubtitlesEnabled);
+  button.classList.toggle("is-translating", translating);
+  button.setAttribute("aria-pressed", String(playerSubtitlesEnabled));
+
+  if (!playerSubtitlesEnabled) {
+    button.textContent = "播放器双语";
+    button.title = "在 YouTube 播放器底部显示双语字幕";
+  } else if (error) {
+    button.textContent = "播放器双语 · 有错误";
+    button.title = `${error} 关闭后重新开启可重试。`;
+  } else if (translating) {
+    button.textContent = `播放器双语 · ${completed}/${total}`;
+    button.title = "播放器字幕已开启，正在生成中文译文";
+  } else if (!currentTranscript) {
+    button.textContent = "播放器双语 · 等待字幕";
+    button.title = "获取视频字幕后会自动显示";
+  } else {
+    button.textContent = "播放器双语 · 已开启";
+    button.title = "点击关闭播放器底部的双语字幕";
+  }
+}
+
+async function loadPlayerSubtitlesSetting() {
+  try {
+    const stored = await chrome.storage.local.get(PLAYER_SUBTITLES_SETTING_KEY);
+    playerSubtitlesEnabled = stored[PLAYER_SUBTITLES_SETTING_KEY] === true;
+  } catch (error) {
+    console.warn("Could not load player subtitle setting:", error);
+    playerSubtitlesEnabled = false;
+  }
+  updatePlayerSubtitlesButton();
+}
+
+async function sendPlayerSubtitleMessage(payload) {
+  if (youtubeTabId !== null && typeof chrome.tabs.sendMessage === "function") {
+    try {
+      const response = await chrome.tabs.sendMessage(youtubeTabId, payload);
+      if (response?.success === false) {
+        throw new Error(response.error || "The YouTube player rejected the request.");
+      }
+      return response;
+    } catch (error) {
+      debugLog("Direct player subtitle message failed; using relay:", error);
+    }
+  }
+
+  const relayed = await chrome.runtime.sendMessage({
+    action: "relayToContent",
+    payload,
+  });
+  if (!relayed?.success) {
+    throw new Error(relayed?.error || "Could not reach the YouTube player.");
+  }
+  if (relayed.response?.success === false) {
+    throw new Error(
+      relayed.response.error || "The YouTube player rejected the request.",
+    );
+  }
+  return relayed.response;
+}
+
+function getSharedTranslationSegments() {
+  const grouped = groupTranscriptEntries(
+    currentTranscript || [],
+    SHARED_TRANSLATION_SEGMENT_LIMITS,
+  );
+
+  return grouped.map((segment, index) => {
+    const nextStart = Number(grouped[index + 1]?.start);
+    const naturalEnd = Number.isFinite(nextStart)
+      ? nextStart
+      : segment.start + 8;
+    return {
+      ...segment,
+      end: Math.max(segment.start + 1, Math.min(naturalEnd, segment.start + 12)),
+    };
+  });
+}
+
+function sharedTranslationCacheKey(segment, videoId = currentVideoId) {
+  return `${videoId}:zh:shared:${segment.id}`;
+}
+
+function getSharedTranslation(segment, videoId = currentVideoId) {
+  const sharedKey = sharedTranslationCacheKey(segment, videoId);
+  const shared = transcriptParagraphCache.get(sharedKey);
+  if (shared) return shared;
+
+  // Migrate translations created by v1.1.6. Its player cues use the same
+  // segmentation, so they are safe to reuse without another API request.
+  const legacyPlayerKey = `${videoId}:zh:player:${segment.id}`;
+  const legacyPlayerTranslation = transcriptParagraphCache.get(legacyPlayerKey);
+  if (legacyPlayerTranslation) {
+    transcriptParagraphCache.set(sharedKey, legacyPlayerTranslation);
+    return legacyPlayerTranslation;
+  }
+  return "";
+}
+
+function hasSharedTranslation(segment, videoId = currentVideoId) {
+  return !!getSharedTranslation(segment, videoId);
+}
+
+function setSharedTranslation(segment, translatedText, videoId = currentVideoId) {
+  const text = String(translatedText || "").trim();
+  if (text) {
+    transcriptParagraphCache.set(sharedTranslationCacheKey(segment, videoId), text);
+  }
+  return text;
+}
+
+async function requestSharedTranslationBatch(
+  sourceBatch,
+  videoId = currentVideoId,
+) {
+  const pendingRequests = new Set();
+  const newSegments = [];
+
+  sourceBatch.forEach((segment) => {
+    if (hasSharedTranslation(segment, videoId)) return;
+    const key = sharedTranslationCacheKey(segment, videoId);
+    const existingRequest = sharedTranslationInFlight.get(key);
+    if (existingRequest) pendingRequests.add(existingRequest);
+    else newSegments.push(segment);
+  });
+
+  if (newSegments.length) {
+    const requestPromise = (async () => {
+      const result = await sendTranslationMessage({
+        action: "translateContent",
+        content: {
+          segments: newSegments.map(({ id, text }) => ({ id, text })),
+        },
+        contentType: "transcriptBatch",
+        targetLanguage: "zh",
+        videoTitle: currentVideoTitle,
+      });
+      if (!result?.success) {
+        throw new Error(result?.error || "Subtitle translation failed.");
+      }
+
+      const aligned = alignTranslatedSegmentBatch(
+        newSegments,
+        result.translatedContent?.segments,
+      );
+      aligned.forEach((item, index) => {
+        setSharedTranslation(newSegments[index], item.text, videoId);
+      });
+      return aligned;
+    })();
+
+    newSegments.forEach((segment) => {
+      sharedTranslationInFlight.set(
+        sharedTranslationCacheKey(segment, videoId),
+        requestPromise,
+      );
+    });
+    const clearRequest = () => {
+      newSegments.forEach((segment) => {
+        const key = sharedTranslationCacheKey(segment, videoId);
+        if (sharedTranslationInFlight.get(key) === requestPromise) {
+          sharedTranslationInFlight.delete(key);
+        }
+      });
+    };
+    requestPromise.then(clearRequest, clearRequest);
+    pendingRequests.add(requestPromise);
+  }
+
+  if (pendingRequests.size) {
+    await Promise.all(pendingRequests);
+  }
+
+  return sourceBatch.map((segment) => {
+    const text = getSharedTranslation(segment, videoId);
+    return {
+      id: segment.id,
+      text,
+      error: text ? "" : "Translation unavailable.",
+    };
+  });
+}
+
+function serializePlayerSubtitleSegments(segments) {
+  return segments.map((segment) => ({
+    id: segment.id,
+    start: segment.start,
+    end: segment.end,
+    text: segment.text,
+    translation: getSharedTranslation(segment),
+  }));
+}
+
+async function togglePlayerSubtitles() {
+  playerSubtitlesEnabled = !playerSubtitlesEnabled;
+  playerSubtitleGeneration += 1;
+  updatePlayerSubtitlesButton();
+  await chrome.storage.local.set({
+    [PLAYER_SUBTITLES_SETTING_KEY]: playerSubtitlesEnabled,
+  });
+
+  if (!playerSubtitlesEnabled) {
+    try {
+      await sendPlayerSubtitleMessage({
+        action: "configurePlayerSubtitles",
+        enabled: false,
+      });
+    } catch (error) {
+      debugLog("Player subtitle overlay was already unavailable:", error);
+    }
+    return;
+  }
+
+  await syncPlayerSubtitleOverlay();
+}
+
+async function syncPlayerSubtitleOverlay() {
+  const generation = ++playerSubtitleGeneration;
+  const videoId = currentVideoId;
+  if (!playerSubtitlesEnabled || !videoId || !currentTranscript) {
+    updatePlayerSubtitlesButton();
+    return;
+  }
+
+  const segments = getSharedTranslationSegments();
+  if (!segments.length) {
+    updatePlayerSubtitlesButton({ error: "This video has no usable subtitles." });
+    return;
+  }
+
+  try {
+    await sendPlayerSubtitleMessage({
+      action: "configurePlayerSubtitles",
+      enabled: true,
+      videoId,
+      segments: serializePlayerSubtitleSegments(segments),
+    });
+    if (
+      generation !== playerSubtitleGeneration ||
+      videoId !== currentVideoId ||
+      !playerSubtitlesEnabled
+    ) {
+      return;
+    }
+    await translatePlayerSubtitleSegments(segments, generation, videoId);
+  } catch (error) {
+    if (generation === playerSubtitleGeneration && playerSubtitlesEnabled) {
+      updatePlayerSubtitlesButton({
+        error: error?.message || "Could not show player subtitles.",
+      });
+    }
+  }
+}
+
+async function translatePlayerSubtitleSegments(segments, generation, videoId) {
+  const missingIndices = segments
+    .map((segment, index) =>
+      hasSharedTranslation(segment, videoId) ? -1 : index,
+    )
+    .filter((index) => index >= 0);
+  const total = segments.length;
+  let completed = total - missingIndices.length;
+  updatePlayerSubtitlesButton({ completed, total });
+  if (!missingIndices.length) {
+    // Usually these values were included in the configure message. Sending
+    // them once more closes a narrow race where Full Transcript populated the
+    // shared cache while the player overlay was being attached.
+    await sendPlayerSubtitleMessage({
+      action: "updatePlayerSubtitleTranslations",
+      videoId,
+      segments: segments.map((segment) => ({
+        id: segment.id,
+        text: getSharedTranslation(segment, videoId),
+        error: "",
+      })),
+    });
+    return;
+  }
+
+  // Start near the currently playing sentence, then work forward before
+  // filling earlier captions. The viewer sees a useful translation first.
+  let currentTime = 0;
+  try {
+    const playback = await sendPlayerSubtitleMessage({ action: "getCurrentTime" });
+    currentTime = Number(playback?.currentTime) || 0;
+  } catch (error) {
+    debugLog("Could not prioritize subtitle translation by playback:", error);
+  }
+  const currentIndex = Math.max(
+    0,
+    segments.findIndex(
+      (segment) => currentTime >= segment.start && currentTime < segment.end,
+    ),
+  );
+  const prioritized = [
+    ...missingIndices.filter((index) => index >= currentIndex),
+    ...missingIndices.filter((index) => index < currentIndex),
+  ];
+
+  for (let offset = 0; offset < prioritized.length; offset += 4) {
+    if (
+      generation !== playerSubtitleGeneration ||
+      videoId !== currentVideoId ||
+      !playerSubtitlesEnabled
+    ) {
+      return;
+    }
+
+    const batchIndices = prioritized.slice(offset, offset + 4);
+    const sourceBatch = batchIndices.map((index) => segments[index]);
+    const aligned = await requestSharedTranslationBatch(sourceBatch, videoId);
+    if (
+      generation !== playerSubtitleGeneration ||
+      videoId !== currentVideoId ||
+      !playerSubtitlesEnabled
+    ) {
+      return;
+    }
+
+    updateVisibleSharedTranslationRows(sourceBatch, aligned);
+    await sendPlayerSubtitleMessage({
+      action: "updatePlayerSubtitleTranslations",
+      videoId,
+      segments: aligned,
+    });
+    completed += aligned.filter((item) => item.text).length;
+    updatePlayerSubtitlesButton({ completed, total });
+  }
+
+  await updateCache();
+  if (completed < total) {
+    updatePlayerSubtitlesButton({
+      error: `${total - completed} subtitle translations were unavailable.`,
+    });
+  } else {
+    updatePlayerSubtitlesButton({ completed: total, total });
+  }
+}
+
 function getOriginalTranscriptLabel() {
   const language = String(currentTranscriptLanguage || "").trim();
   return /^[A-Za-z0-9-]{1,20}$/.test(language)
@@ -1745,11 +2606,11 @@ function getOriginalTranscriptLabel() {
 }
 
 function getActiveTranscriptSegments() {
-  return groupTranscriptEntries(currentTranscript || []);
+  return getSharedTranslationSegments();
 }
 
 function transcriptTranslationCacheKey(segment) {
-  return `${currentVideoId}:zh:semantic:${segment.id}`;
+  return sharedTranslationCacheKey(segment);
 }
 
 function setTranscriptModeButtons(mode) {
@@ -1819,9 +2680,7 @@ function renderTranscriptModeRows(segments, mode) {
   const rows = [];
   segments.forEach((segment, index) => {
     const div = document.createElement("div");
-    const cached = transcriptParagraphCache.get(
-      transcriptTranslationCacheKey(segment),
-    );
+    const cached = getSharedTranslation(segment);
     div.className = `transcript-entry ${cached ? "translated" : "translating"}`;
     div.dataset.seconds = segment.start;
     div.dataset.segmentId = segment.id;
@@ -1877,10 +2736,7 @@ function updateTranslatedRow(segment, index, alignedItem, generation) {
   if (!row) return;
 
   if (alignedItem.text) {
-    transcriptParagraphCache.set(
-      transcriptTranslationCacheKey(segment),
-      alignedItem.text,
-    );
+    setSharedTranslation(segment, alignedItem.text);
   }
 
   const copy = row.querySelector(".transcript-copy");
@@ -1912,6 +2768,26 @@ function updateTranslatedRow(segment, index, alignedItem, generation) {
   }
 }
 
+function updateVisibleSharedTranslationRows(sourceBatch, alignedItems) {
+  if (currentTranscriptMode === "original") return;
+  const activeSegments = getActiveTranscriptSegments();
+  const indicesById = new Map(
+    activeSegments.map((segment, index) => [segment.id, index]),
+  );
+  alignedItems.forEach((item, batchIndex) => {
+    const segment = sourceBatch[batchIndex];
+    const index = indicesById.get(segment.id);
+    if (Number.isInteger(index)) {
+      updateTranslatedRow(
+        segment,
+        index,
+        item,
+        translationGeneration,
+      );
+    }
+  });
+}
+
 let activeTranslationQueue = null;
 
 async function requestTranscriptTranslationBatch(
@@ -1924,15 +2800,7 @@ async function requestTranscriptTranslationBatch(
   const sourceBatch = indices.map((index) => segments[index]);
   setTranslatingSpinner(true);
   try {
-    const result = await sendTranslationMessage({
-      action: "translateContent",
-      content: {
-        segments: sourceBatch.map(({ id, text }) => ({ id, text })),
-      },
-      contentType: "transcriptBatch",
-      targetLanguage: "zh",
-      videoTitle: currentVideoTitle,
-    });
+    const aligned = await requestSharedTranslationBatch(sourceBatch, videoId);
 
     const isStale =
       generation !== translationGeneration ||
@@ -1940,14 +2808,7 @@ async function requestTranscriptTranslationBatch(
       mode !== currentTranscriptMode;
     if (isStale) return;
 
-    const responseSegments = result?.success
-      ? result.translatedContent?.segments
-      : [];
-    const aligned = alignTranslatedSegmentBatch(sourceBatch, responseSegments);
     aligned.forEach((item, batchIndex) => {
-      if (!result?.success) {
-        item.error = result?.error || "Translation failed.";
-      }
       updateTranslatedRow(
         sourceBatch[batchIndex],
         indices[batchIndex],
@@ -2029,9 +2890,7 @@ async function translateTranscript() {
 
   const enqueue = (index, force = false) => {
     if (!Number.isInteger(index) || !segments[index]) return;
-    const cached = transcriptParagraphCache.has(
-      transcriptTranslationCacheKey(segments[index]),
-    );
+    const cached = hasSharedTranslation(segments[index], videoId);
     if ((!force && cached) || queued.has(index)) return;
     queue.push(index);
     queued.add(index);
@@ -2080,6 +2939,9 @@ globalThis.__YTD_TRANSCRIPT_TESTING__ = {
   groupTranscriptEntries,
   splitOversizedThought,
   alignTranslatedSegmentBatch,
+  sharedTranslationCacheKey,
+  getSharedTranslation,
+  requestSharedTranslationBatch,
   renderSubtitleInlineMarkup,
   renderTranscriptSegmentContent,
 };

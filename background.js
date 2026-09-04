@@ -13,7 +13,7 @@
 
 // Import safe defaults and validation helpers. Secret keys live in
 // chrome.storage.local and are never part of the extension source.
-importScripts("settings.js");
+importScripts("settings.js", "vocabulary.js");
 
 const DEBUG = false;
 const AI_PROVIDER_IDLE_TIMEOUT_MS = 50_000;
@@ -60,7 +60,9 @@ async function loadPromptSection(fileName, heading, variables = {}) {
     sectionStart,
     nextSection === -1 ? markdown.length : nextSection,
   );
-  const fenceMatch = section.match(/```(?:[A-Za-z0-9_-]+)?\n([\s\S]*?)\n```/);
+  const fenceMatch = section.match(
+    /```(?:[A-Za-z0-9_-]+)?\r?\n([\s\S]*?)\r?\n```/,
+  );
   if (!fenceMatch) {
     throw new Error(`Prompt section not found: ${fileName}#${heading}`);
   }
@@ -358,6 +360,55 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "deleteNote") {
     // Delete a specific note
     handleDeleteNote(message.noteId)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.action === "saveVocabulary") {
+    handleSaveVocabulary(message.entry)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.action === "getVocabulary") {
+    handleGetVocabulary(message.videoId)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.action === "deleteVocabulary") {
+    handleDeleteVocabulary(message.entryId)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.action === "markVocabularySynced") {
+    handleMarkVocabularySynced(message.entryId)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.action === "enrichVocabulary") {
+    handleEnrichVocabulary(message.entry)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.action === "analyzeVocabularyContext") {
+    handleAnalyzeVocabularyContext(message.entry)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
+
+  if (message.action === "updateVocabularyEnrichment") {
+    handleUpdateVocabularyEnrichment(message.entryId, message.enrichment)
       .then(sendResponse)
       .catch((err) => sendResponse({ success: false, error: err.message }));
     return true;
@@ -1360,6 +1411,235 @@ async function handleDeleteNote(noteId) {
   }
 }
 
+// ============================================================
+// VOCABULARY MANAGEMENT
+// ============================================================
+
+async function handleSaveVocabulary(input) {
+  try {
+    const incoming = YTD_VOCABULARY.createEntry(input);
+    const result = await chrome.storage.local.get(YTD_VOCABULARY.STORAGE_KEY);
+    const storedEntries = Array.isArray(result[YTD_VOCABULARY.STORAGE_KEY])
+      ? result[YTD_VOCABULARY.STORAGE_KEY]
+      : [];
+    const existing = YTD_VOCABULARY.mergeEntryList(storedEntries).find(
+      (entry) => entry.normalizedWord === incoming.normalizedWord,
+    );
+    const previousOccurrenceCount = existing?.occurrences.length || 0;
+    const entries = YTD_VOCABULARY.mergeEntryList([
+      ...storedEntries,
+      incoming,
+    ]);
+    if (entries.length > 1000) entries.splice(1000);
+    const entry = entries.find(
+      (candidate) => candidate.normalizedWord === incoming.normalizedWord,
+    );
+    await chrome.storage.local.set({
+      [YTD_VOCABULARY.STORAGE_KEY]: entries,
+    });
+    chrome.runtime
+      .sendMessage({ action: "vocabularySaved", entry })
+      .catch(() => {});
+    return {
+      success: true,
+      entry,
+      merged: Boolean(existing),
+      occurrenceAdded: entry.occurrences.length > previousOccurrenceCount,
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function handleGetVocabulary(videoId) {
+  try {
+    const result = await chrome.storage.local.get(YTD_VOCABULARY.STORAGE_KEY);
+    const storedEntries = Array.isArray(result[YTD_VOCABULARY.STORAGE_KEY])
+      ? result[YTD_VOCABULARY.STORAGE_KEY]
+      : [];
+    let entries = YTD_VOCABULARY.mergeEntryList(storedEntries);
+    if (JSON.stringify(entries) !== JSON.stringify(storedEntries)) {
+      await chrome.storage.local.set({
+        [YTD_VOCABULARY.STORAGE_KEY]: entries,
+      });
+    }
+    if (videoId) {
+      entries = entries.filter((entry) =>
+        entry.occurrences.some((occurrence) => occurrence.videoId === videoId),
+      );
+    }
+    return { success: true, entries };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function handleDeleteVocabulary(entryId) {
+  try {
+    const result = await chrome.storage.local.get(YTD_VOCABULARY.STORAGE_KEY);
+    const entries = YTD_VOCABULARY.mergeEntryList(
+      result[YTD_VOCABULARY.STORAGE_KEY] || [],
+    ).filter((entry) => entry.id !== entryId);
+    await chrome.storage.local.set({
+      [YTD_VOCABULARY.STORAGE_KEY]: entries,
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function handleMarkVocabularySynced(entryId) {
+  try {
+    const result = await chrome.storage.local.get(YTD_VOCABULARY.STORAGE_KEY);
+    const entries = YTD_VOCABULARY.mergeEntryList(
+      result[YTD_VOCABULARY.STORAGE_KEY] || [],
+    );
+    const entry = entries.find((candidate) => candidate.id === entryId);
+    if (!entry) return { success: false, error: "Vocabulary entry not found." };
+    entry.obsidianSyncedAt = Date.now();
+    await chrome.storage.local.set({
+      [YTD_VOCABULARY.STORAGE_KEY]: entries,
+    });
+    return { success: true, entry };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function handleEnrichVocabulary(input) {
+  try {
+    const entry = YTD_VOCABULARY.createEntry(input);
+    const variables = {
+      word: entry.word,
+      videoTitle: entry.videoTitle,
+      context: entry.context || entry.word,
+    };
+    const systemPrompt = await loadPromptSection(
+      "vocabulary.md",
+      "System prompt",
+      variables,
+    );
+    const userPrompt = await loadPromptSection(
+      "vocabulary.md",
+      "User prompt",
+      variables,
+    );
+    const { text } = await requestAiCompletion({
+      temperature: 0.2,
+      maxTokens: 4096,
+      responseFormat: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    });
+    const parsed = parseLooseJson(text);
+    const dictionary = YTD_VOCABULARY.normalizeDictionary(
+      parsed.dictionary,
+      entry.word,
+    );
+    const contextAnalysis = YTD_VOCABULARY.normalizeContextAnalysis(
+      parsed.contextAnalysis,
+      entry.context,
+    );
+    if (!dictionary) {
+      throw new Error("Dictionary generation returned no valid senses.");
+    }
+    return { success: true, dictionary, contextAnalysis };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || "Could not generate dictionary details.",
+    };
+  }
+}
+
+async function handleAnalyzeVocabularyContext(input) {
+  try {
+    const entry = YTD_VOCABULARY.createEntry(input);
+    const variables = {
+      word: entry.word,
+      videoTitle: entry.videoTitle,
+      context: entry.context || entry.word,
+    };
+    const systemPrompt = await loadPromptSection(
+      "vocabulary.md",
+      "Context system prompt",
+      variables,
+    );
+    const userPrompt = await loadPromptSection(
+      "vocabulary.md",
+      "Context user prompt",
+      variables,
+    );
+    const { text } = await requestAiCompletion({
+      temperature: 0.2,
+      maxTokens: 1600,
+      responseFormat: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    });
+    const parsed = parseLooseJson(text);
+    const contextAnalysis = YTD_VOCABULARY.normalizeContextAnalysis(
+      parsed.contextAnalysis || parsed,
+      entry.context,
+    );
+    if (!contextAnalysis) {
+      throw new Error("Context analysis returned no valid details.");
+    }
+    return { success: true, contextAnalysis };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message || "Could not analyze this video sentence.",
+    };
+  }
+}
+
+async function handleUpdateVocabularyEnrichment(entryId, enrichment = {}) {
+  try {
+    const result = await chrome.storage.local.get(YTD_VOCABULARY.STORAGE_KEY);
+    const entries = YTD_VOCABULARY.mergeEntryList(
+      result[YTD_VOCABULARY.STORAGE_KEY] || [],
+    );
+    let entry = entries.find((candidate) => candidate.id === entryId);
+    if (!entry) return { success: false, error: "Vocabulary entry not found." };
+
+    const dictionary = YTD_VOCABULARY.normalizeDictionary(
+      enrichment.dictionary,
+      entry.word,
+    );
+    if (!dictionary) {
+      return { success: false, error: "Dictionary details were invalid." };
+    }
+    const contextAnalysis = YTD_VOCABULARY.normalizeContextAnalysis(
+      enrichment.contextAnalysis,
+      entry.context,
+    );
+    const latestOccurrence = entry.occurrences[entry.occurrences.length - 1];
+    if (latestOccurrence && contextAnalysis) {
+      latestOccurrence.contextAnalysis = contextAnalysis;
+    }
+    entry = YTD_VOCABULARY.createEntry({
+      ...entry,
+      dictionary,
+      occurrences: entry.occurrences,
+    });
+    entry.enrichmentError = "";
+    const entryIndex = entries.findIndex((candidate) => candidate.id === entryId);
+    entries[entryIndex] = entry;
+    await chrome.storage.local.set({
+      [YTD_VOCABULARY.STORAGE_KEY]: entries,
+    });
+    return { success: true, entry };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 async function handleExplainSelection(
   selectedText,
   transcriptContext,
@@ -1635,4 +1915,8 @@ globalThis.__YTD_TRANSLATION_TESTING__ = {
   validateTranscriptBatchRequest,
   normalizeTranslatedSegmentBatch,
   handleTranslateContent,
+  handleEnrichVocabulary,
+  handleAnalyzeVocabularyContext,
+  handleSaveVocabulary,
+  handleGetVocabulary,
 };

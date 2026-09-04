@@ -74,6 +74,45 @@
         </section>
 
         <section class="card">
+          <h2 data-i18n="obsidianWordbook">Obsidian wordbook</h2>
+          <p class="help" data-i18n="obsidianHelp">
+            YouTube Digest uses Obsidian's official URI to create one Markdown
+            note per saved word. No Obsidian community plugin or API key is
+            required.
+          </p>
+          <label for="obsidianVault" data-i18n="obsidianVaultLabel"
+            >Vault name or ID</label
+          >
+          <input
+            id="obsidianVault"
+            name="obsidianVault"
+            type="text"
+            maxlength="200"
+            autocomplete="off"
+            placeholder="My Obsidian Vault"
+          />
+          <p class="help" data-i18n="obsidianVaultHelp">
+            Use the vault name shown in Obsidian, or copy its vault ID from the
+            vault switcher.
+          </p>
+          <label for="obsidianFolder" data-i18n="obsidianFolderLabel"
+            >Vocabulary folder</label
+          >
+          <input
+            id="obsidianFolder"
+            name="obsidianFolder"
+            type="text"
+            maxlength="500"
+            autocomplete="off"
+            value="YouTube Digest/Vocabulary"
+          />
+          <p class="help" data-i18n="obsidianFolderHelp">
+            Folder path inside the vault. It will be created by Obsidian when
+            needed.
+          </p>
+        </section>
+
+        <section class="card">
           <h2 data-i18n="aiProvider">AI provider</h2>
           <div
             class="provider-summary"
@@ -204,6 +243,13 @@
             Delete all notes
           </button>
           <button
+            id="clearVocabularyBtn"
+            type="button"
+            data-i18n="deleteVocabulary"
+          >
+            Delete all vocabulary
+          </button>
+          <button
             id="resetBtn"
             class="danger"
             type="button"
@@ -222,6 +268,7 @@
     </main>
 
     <script src="settings.js"></script>
+    <script src="vocabulary.js"></script>
     <script src="options.js"></script>
   </body>
 </html>
