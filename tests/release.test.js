@@ -39,95 +39,35 @@ test("release copy documents current scope without em dashes", () => {
     /\bYT Digest\b/,
   );
   assert.match(readme, /^# YouTube Digest Learning Companion$/m);
-  assert.match(readme, /Zara Zhang's original YouTube Digest/);
-  assert.match(readme, /Project lineage:[\s\S]*@zarazhangrui/);
-  assert.match(readme, /Contributors and attribution/);
-  assert.match(readme, /enhanced v1\.3\.0 edition/);
-  assert.match(
-    readme,
-    /Turn every YouTube video into a resource for deep learning\./,
-  );
-  assert.doesNotMatch(readme, /before deciding how much of it to watch/i);
-  assert.match(readme, /^## Install with your coding agent$/m);
-  assert.match(
-    readme,
-    /permanent folder I choose[\s\S]*tell me its exact full path[\s\S]*If I need a suggestion during this first installation[\s\S]*`~\/Documents\/youtube-digest`[\s\S]*`%USERPROFILE%\\Documents\\youtube-digest`[\s\S]*do not assume either path/,
-  );
-  assert.match(
-    readme,
-    /Moving or deleting the source folder breaks the unpacked extension until you load it again from the new location\./,
-  );
-  assert.match(
-    readme,
-    /selecting the exact project folder you chose in Chrome with \*\*Load unpacked\*\*/,
-  );
-  assert.match(
-    readme,
-    /Select the exact project folder you chose, which must contain `manifest\.json`/,
-  );
-  assert.match(readme, /upstream issues and pull requests are not accepted/i);
-  assert.doesNotMatch(readme, /^## Contributing$/m);
   assert.match(chineseReadme, /^# YouTube Digest Learning Companion$/m);
-  assert.match(chineseReadme, /Zara Zhang 的原始 YouTube Digest 项目/);
-  assert.match(chineseReadme, /项目来源：[\s\S]*@zarazhangrui/);
-  assert.match(chineseReadme, /增强版 v1\.3\.0 新增功能/);
-  assert.match(chineseReadme, /把每个 YouTube 视频变成一份可以深入学习的资料/);
-  assert.match(chineseReadme, /^## 让你的编程 Agent 帮你安装$/m);
-  assert.match(
-    chineseReadme,
-    /我选择的长期保留文件夹[\s\S]*告诉我准确的完整路径[\s\S]*第一次安装时需要位置建议[\s\S]*`~\/Documents\/youtube-digest`[\s\S]*`%USERPROFILE%\\Documents\\youtube-digest`[\s\S]*不要假设我一定使用这些路径/,
-  );
-  assert.match(
-    chineseReadme,
-    /如果移动或删除源代码文件夹，Chrome 中加载的扩展会失效，需要从新的位置重新加载。/,
-  );
-  assert.match(
-    chineseReadme,
-    /“加载已解压的扩展程序”选择你刚才确定的那个准确项目文件夹/,
-  );
-  assert.match(
-    chineseReadme,
-    /选择你刚才确定的那个准确项目文件夹，其中必须包含 `manifest\.json`/,
-  );
-  assert.match(chineseReadme, /不接受上游 Issue 或 Pull Request/);
-  assert.match(chineseReadme, /增加更多翻译语言/);
-
-  assert.match(readme, /100 credits per month/i);
-  assert.match(readme, /native transcript request uses \*\*1 credit\*\*/i);
-  assert.match(readme, /generated transcript costs \*\*2 credits per video minute\*\*/i);
-  assert.match(readme, /HTTP `206` still uses \*\*1 credit\*\*/i);
-  assert.match(readme, /forces `mode=native`/i);
-  assert.match(readme, /roughly 100 transcript lookups per month/i);
-  assert.match(readme, /supadata\.ai\/pricing/i);
-  assert.match(readme, /docs\.supadata\.ai\/get-transcript/i);
-  assert.match(readme, /dash\.supadata\.ai\/auth\/sign-up/i);
-  assert.match(readme, /platform\.deepseek\.com\/api_keys/i);
-  assert.match(readme, /api-docs\.deepseek\.com/i);
-  assert.match(readme, /api-docs\.deepseek\.com\/quick_start\/pricing/i);
-  assert.match(readme, /\$0\.007[\s\S]*\$0\.014/);
-  assert.match(readme, /\$0\.22[\s\S]*\$0\.44/);
-  assert.match(readme, /\$0\.66[\s\S]*\$1\.32/);
-  assert.match(readme, /01:00–04:00[\s\S]*06:00–10:00 UTC/);
-  assert.match(readme, /20-minute English talk/i);
-  assert.match(readme, /32,600 input tokens/i);
-  assert.match(readme, /\$0\.003[^\n]*\$0\.010 USD/i);
-  assert.match(readme, /\$0\.005[^\n]*\$0\.020 USD/i);
-  assert.match(chineseReadme, /api-docs\.deepseek\.com\/quick_start\/pricing/i);
-  assert.match(chineseReadme, /\$0\.007[\s\S]*\$0\.014/);
-  assert.match(chineseReadme, /\$0\.22[\s\S]*\$0\.44/);
-  assert.match(chineseReadme, /\$0\.66[\s\S]*\$1\.32/);
-  assert.match(chineseReadme, /UTC 01:00–04:00[\s\S]*06:00–10:00/);
-  assert.match(chineseReadme, /20 \u5206\u949f\u82f1\u6587\u89c6\u9891/);
-  assert.match(chineseReadme, /32,600 \u4e2a\u8f93\u5165 token/);
-  assert.match(chineseReadme, /\$0\.003[^\n]*\$0\.010 USD/);
-  assert.match(chineseReadme, /\$0\.005[^\n]*\$0\.020 USD/);
-  assert.match(chineseReadme, /dash\.supadata\.ai\/auth\/sign-up/i);
-  assert.match(chineseReadme, /platform\.deepseek\.com\/api_keys/i);
-  assert.match(readme, /^### The Digest button is missing on a YouTube video$/m);
-  assert.match(
-    chineseReadme,
-    /^### YouTube 视频页面没有显示 Digest 按钮$/m,
-  );
+  assert.match(readme, /original YouTube Digest codebase created by[\s\S]*@zarazhangrui/);
+  assert.match(chineseReadme, /本项目是在[\s\S]*Zara Zhang（@zarazhangrui）/);
+  assert.match(readme, /^## What this edition adds$/m);
+  assert.match(chineseReadme, /^## 本增强版新增内容$/m);
+  assert.match(readme, /^## Original features, briefly$/m);
+  assert.match(chineseReadme, /^## 原有功能概述$/m);
+  assert.match(readme, /Zara Zhang's upstream README/);
+  assert.match(chineseReadme, /Zara Zhang 原项目 README/);
+  assert.match(readme, /The sections below focus on this edition's additions/);
+  assert.match(chineseReadme, /下面重点介绍本增强版新增功能/);
+  assert.match(readme, /^## Use player bilingual subtitles$/m);
+  assert.match(chineseReadme, /^## 使用播放器底部双语字幕$/m);
+  assert.match(readme, /^## Build the vocabulary notebook$/m);
+  assert.match(chineseReadme, /^## 建立单词本$/m);
+  assert.match(readme, /^### Repeated words and multiple videos$/m);
+  assert.match(chineseReadme, /^### 重复单词与多个视频$/m);
+  assert.match(readme, /^## Send vocabulary to Obsidian$/m);
+  assert.match(chineseReadme, /^## 把单词发送到 Obsidian$/m);
+  assert.match(readme, /Player subtitles and Full Transcript use the same/);
+  assert.match(chineseReadme, /不会为同一句向 DeepSeek 调用两次/);
+  assert.match(readme, /same word at the same video timestamp is ignored/);
+  assert.match(chineseReadme, /同一单词、同一视频时间点的重复添加会被忽略/);
+  assert.match(readme, /official `obsidian:\/\/` URI/);
+  assert.match(chineseReadme, /Obsidian 官方 `obsidian:\/\/` URI/);
+  assert.match(readme, /latest release ZIP/);
+  assert.match(chineseReadme, /最新 Release/);
+  assert.doesNotMatch(readme, /youtube-digest-enhanced/);
+  assert.doesNotMatch(chineseReadme, /youtube-digest-enhanced/);
 
   const optionsPage = read("options.html");
   const optionsStyles = read("options.css");
@@ -170,19 +110,6 @@ test("release copy documents current scope without em dashes", () => {
   assert.ok(optionsPage.includes(`>${customizationPrompt}</textarea>`));
   assert.doesNotMatch(customizationPrompt, /Documents|USERPROFILE/);
 
-  assert.match(readme, /^## Remix it with your coding agent$/m);
-  assert.match(readme, /more translation languages/i);
-  assert.match(readme, /customized summary templates/i);
-  assert.match(readme, /vocabulary notebook/i);
-  assert.match(
-    readme,
-    /first open the exact YouTube Digest project folder that Chrome loaded through \*\*Load unpacked\*\* in your coding agent/,
-  );
-  assert.match(
-    chineseReadme,
-    /先在编程 Agent 中打开 Chrome 通过“加载已解压的扩展程序”使用的那个准确的 YouTube Digest 项目文件夹/,
-  );
-
   const publishedDocs = [
     readme,
     chineseReadme,
@@ -193,10 +120,8 @@ test("release copy documents current scope without em dashes", () => {
   assert.doesNotMatch(publishedDocs, /optional custom-origin/i);
   assert.doesNotMatch(publishedDocs, /chosen AI provider/i);
   assert.doesNotMatch(publishedDocs, /configure a different OpenAI-compatible/i);
-  assert.match(readme, /published version supports DeepSeek V4 Flash as its only AI provider/i);
-  assert.match(chineseReadme, /发布版本只支持 DeepSeek V4 Flash/);
-  assert.match(readme, /^## Build a vocabulary notebook with Obsidian$/m);
-  assert.match(chineseReadme, /^## 使用 Obsidian 建立单词本$/m);
+  assert.match(readme, /published edition supports[\s\S]*DeepSeek V4 Flash/i);
+  assert.match(chineseReadme, /发布版本支持[\s\S]*DeepSeek V4 Flash/);
   assert.match(read("sidepanel.html"), /data-tab="vocabulary"/);
   assert.match(read("sidepanel.html"), /id="exportVocabularyBtn"/);
   assert.match(read("background.js"), /action === "saveVocabulary"/);
@@ -213,7 +138,7 @@ test("release copy documents current scope without em dashes", () => {
   assert.match(contributors, /youtube-digest\/graphs\/contributors/);
   assert.match(read("LICENSE"), /Copyright \(c\) 2026 Zara Zhang/);
   const notice = read("NOTICE.md");
-  assert.match(notice, /directly based on that project/);
+  assert.match(notice, /continues development directly on the source code/);
   assert.match(notice, /Zara Zhang \(@zarazhangrui\)/);
   assert.match(notice, /OpenAI Codex/);
   assert.match(readme, /^## Development credits$/m);
